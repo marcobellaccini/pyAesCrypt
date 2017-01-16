@@ -312,8 +312,20 @@ try:
                     # (so that, if fails, deletes output file)
                     atexit.register(remove, ofname)
                     
-                    # decrypt ciphertext while reading, until last block is reached
-                    while fIn.tell() < stat(args.filename).st_size - 32 - 1 - AES.block_size:
+                    # decrypt ciphertext 64K at a time
+                    bufferSize = 64 * 1024
+                    inputFileSize = stat(args.filename).st_size
+                    assert bufferSize % AES.block_size == 0
+                    while fIn.tell() < inputFileSize - 32 - 1 - bufferSize:
+                        # read data
+                        cText = fIn.read(bufferSize)
+                        # update HMAC
+                        hmac0Act.update(cText)
+                        # decrypt data and write it to output file
+                        fOut.write(cipher0.decrypt(cText))
+
+                    # decrypt remaining ciphertext, until last block is reached
+                    while fIn.tell() < inputFileSize - 32 - 1 - AES.block_size:
                         # read data
                         cText = fIn.read(AES.block_size)
                         # update HMAC
@@ -323,7 +335,7 @@ try:
                         
                     # last block reached, remove padding if needed
                     # read last block
-                    if fIn.tell() != stat(args.filename).st_size - 32 - 1: # this is for empty files
+                    if fIn.tell() != inputFileSize - 32 - 1: # this is for empty files
                         cText = fIn.read(AES.block_size)
                         if len(cText) < AES.block_size:
                             exit("Error: file is corrupted.")
