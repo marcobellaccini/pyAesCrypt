@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-#
 #==============================================================================
 # Copyright 2016 Marco Bellaccini - marco.bellaccini[at!]gmail.com
 # 
@@ -17,9 +15,9 @@
 #==============================================================================
 
 #==============================================================================
-# pyAesCrypt 0.1.2
+# pyAesCrypt 0.2
 # 
-# pyAesCrypt is a Python file-encryption script that uses AES256-CBC to 
+# pyAesCrypt is a Python file-encryption utility that uses AES256-CBC to 
 # encrypt/decrypt files.
 # pyAesCrypt is compatible with the AES Crypt (https://www.aescrypt.com/)
 # file format (version 2).
@@ -33,18 +31,22 @@
 # not possible to wipe memory areas were sensitive information was stored.
 #==============================================================================
 
-import argparse
+# pyAesCrypt module
+
 from Crypto.Hash import SHA256
 from Crypto.Hash import HMAC
 from Crypto.Cipher import AES
 from Crypto import Random
-import getpass
 from sys import exit
 from os import stat
 from os import remove
 import atexit
 
-maxPassLen = 1024 # maximum password length (number of chars)
+# encryption/decryption buffer size - 64K
+bufferSize = 64 * 1024
+
+# maximum password length (number of chars)
+maxPassLen = 1024
 
 # password stretching function
 def stretch(passw, iv1):
@@ -58,55 +60,20 @@ def stretch(passw, iv1):
         digest=passHash.digest()
     
     return digest
-    
-# parse command line arguments
-parser = argparse.ArgumentParser(description="Encrypt/decrypt a file using AES256-CBC.")
-parser.add_argument("filename", type=str,
-                    help="file to encrypt/decrypt")
-parser.add_argument("-o","--out", type=str,
-                    default=None, help="specify output file")
-                    
-# encrypt OR decrypt....
-groupED = parser.add_mutually_exclusive_group(required=True)              
-groupED.add_argument("-e", "--encrypt",
-                    help="encrypt file", action="store_true")        
-groupED.add_argument("-d", "--decrypt",
-                    help="decrypt file", action="store_true")         
-args = parser.parse_args()
 
-# open input file ("with" statement will close file)
-try:
-    with open(args.filename,"rb") as fIn:   
-        # prompt the user for password
-        passw=str(getpass.getpass("Password:"))
-        
-        if args.encrypt:
-            # check against max password length
-            if len(passw) > maxPassLen:
-                exit("Error: password is too long")
-                
-            # Check password complexity
-            # here assume that a good password is at least 8 chars long
-            # and includes at least:
-            # 1 lowercase char
-            # 1 uppercase char
-            # 1 digit
-            # 1 symbol
-            if not((len(passw) > 7) and any(c.islower() for c in passw)
-                and any(c.isupper() for c in passw) and any(c.isdigit() for c in passw)
-                and any(not(c.isalnum()) for c in passw)):
-                    print("Warning: your password seems weak.")
-                    print("A password should be at least 8 chars long and should "
-                    "contain at least one lowercase char, one uppercase char, one "
-                    "digit and one symbol.")
-            
-            # re-prompt the user for password
-            passwConf=str(getpass.getpass("Confirm password:"))
-            
-            # check the second pass against the first
-            if passw != passwConf:
-                exit("Error: passwords you provided do not match")
-                
+
+# encrypting function
+# arguments:
+# infile: plaintext file path
+# outfile: ciphertext file path
+# passw: encryption password
+# bufferSize: encryption buffer size, must be a multiple of AES block size (16)
+#             using a larger buffer speeds up things when dealing with big files
+def encryptFile(infile, outfile, passw, bufferSize):
+    assert bufferSize % AES.block_size == 0, "Buffer size must be a multiple of AES block size."
+    assert len(passw) <= maxPassLen, "Password is too long."
+    try:
+        with open(infile,"rb") as fIn:
             # initialize random number generator
             # using pycrypto cryptographic PRNG (based on "Fortuna" by N. Ferguson 
             # and B. Schneier, with the OS RNG, time.clock() and time.time() as
@@ -141,14 +108,8 @@ try:
             hmac1 = HMAC.new(key, digestmod=SHA256)
             hmac1.update(c_iv_key)
             
-            # open output file
-            if args.out is not None:
-                ofname = args.out
-            else:
-                ofname = args.filename+".aes"
-                
             try:
-                with open(ofname,"wb") as fOut: 
+                with open(outfile,"wb") as fOut: 
                     # write header
                     fOut.write(bytes("AES", "utf8"))
                     
@@ -159,7 +120,7 @@ try:
                     fOut.write(b"\x00")
                     
                     # setup "CREATED-BY" extension
-                    cby="pyAesCrypt 0.1"
+                    cby="pyAesCrypt 0.2"
                     
                     # write "CREATED-BY" extension length
                     fOut.write(b"\x00" + bytes([1+len("CREATED_BY"+cby)]))
@@ -188,13 +149,22 @@ try:
                     
                     # encrypt file while reading it
                     while True:
-                        fdata = fIn.read(AES.block_size)
-                        # check if last block was reached
-                        if len(fdata) < AES.block_size and len(fdata) > 0:
+                        # try to read bufferSize bytes
+                        fdata = fIn.read(bufferSize)
+                        
+                        # get the real number of bytes read
+                        bytesRead = len(fdata)
+                        
+                        # check if EOF was reached
+                        if bytesRead < bufferSize:
                             # file size mod 16, lsb positions
-                            fs16 = bytes([len(fdata)])
+                            fs16 = bytes([bytesRead % AES.block_size])
                             # pad data (this is NOT PKCS#7!)
-                            padLen = 16 - len(fdata)
+                            # ...unless no bytes or a multiple of a block size of bytes was read
+                            if bytesRead % AES.block_size == 0:
+                                padLen = 0
+                            else:
+                                padLen = 16 - bytesRead % AES.block_size
                             fdata += bytes([padLen])*padLen
                             # encrypt data
                             cText = cipher0.encrypt(fdata)
@@ -204,11 +174,7 @@ try:
                             fOut.write(cText)
                             # break
                             break
-                        elif len(fdata) == 0:
-                            # file size mod 16, lsb positions
-                            fs16 = bytes([len(fdata)])
-                            # break
-                            break
+                        # ...otherwise a full bufferSize was read
                         else:
                             # encrypt data
                             cText = cipher0.encrypt(fdata)
@@ -223,14 +189,28 @@ try:
                     
                     # write HMAC-SHA256 of the encrypted file
                     fOut.write(hmac0.digest())
-                    
+                        
             except IOError:
                 exit("Error: unable to write output file.")
-                    
-        elif args.decrypt:
+            
+    except IOError:
+        exit("Error: file \"" + infile + "\" was not found.")
+            
+# decrypting function
+# arguments:
+# infile: ciphertext file path
+# outfile: plaintext file path
+# passw: encryption password
+# bufferSize: decryption buffer size, must be a multiple of AES block size (16)
+#             using a larger buffer speeds up things when dealing with big files
+def decryptFile(infile, outfile, passw, bufferSize):
+    assert bufferSize % AES.block_size == 0, "Buffer size must be a multiple of AES block size"
+    assert len(passw) <= maxPassLen, "Password is too long."
+    try:
+        with open(infile,"rb") as fIn:
             fdata = fIn.read(3)
             # check if file is in AES Crypt format (also min length check)
-            if fdata != bytes("AES","utf8") or stat(args.filename).st_size < 136:
+            if fdata != bytes("AES","utf8") or stat(infile).st_size < 136:
                 exit("Error: file is corrupted or "
                 "not an AES Crypt (or pyAesCrypt) file.")
                 
@@ -296,26 +276,16 @@ try:
             
             # instantiate actual HMAC-SHA256 of the ciphertext
             hmac0Act = HMAC.new(intKey, digestmod=SHA256)
-            
-            # open output file
-            if args.out is not None:
-                ofname = args.out
-            elif args.filename.endswith(".aes"):
-                ofname = args.filename[:-4]
-            else:
-                exit("Error: if input file extension is not \".aes\", you should "
-                "provide the output file name through \"-o\" option.")
                 
             try:
-                with open(ofname,"wb") as fOut: 
+                with open(outfile,"wb") as fOut: 
                     # register delete output file as cleanup function
                     # (so that, if fails, deletes output file)
-                    atexit.register(remove, ofname)
+                    atexit.register(remove, outfile)
                     
-                    # decrypt ciphertext 64K at a time
-                    bufferSize = 64 * 1024
-                    inputFileSize = stat(args.filename).st_size
-                    assert bufferSize % AES.block_size == 0
+                    # get input file size
+                    inputFileSize = stat(infile).st_size
+                    
                     while fIn.tell() < inputFileSize - 32 - 1 - bufferSize:
                         # read data
                         cText = fIn.read(bufferSize)
@@ -375,7 +345,6 @@ try:
                     atexit.unregister(remove)
                     
             except IOError:
-                exit("Error: unable to write output file.")
-    
-except IOError:
-    exit("Error: file \"" + args.filename + "\" was not found.")
+                exit("Error: unable to write output file.")            
+    except IOError:
+        exit("Error: file \"" + infile + "\" was not found.")

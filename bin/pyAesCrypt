@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+#
+#==============================================================================
+# Copyright 2016 Marco Bellaccini - marco.bellaccini[at!]gmail.com
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#==============================================================================
+
+#==============================================================================
+# pyAesCrypt 0.2
+# 
+# pyAesCrypt is a Python file-encryption utility that uses AES256-CBC to 
+# encrypt/decrypt files.
+# pyAesCrypt is compatible with the AES Crypt (https://www.aescrypt.com/)
+# file format (version 2).
+# 
+# IMPORTANT SECURITY NOTE: version 2 of the AES Crypt file format does not  
+# authenticate the "file size modulo 16" byte. This implies that an attacker  
+# with write access to the encrypted file may alter the corresponding plaintext 
+# file size by up to 15 bytes.
+#
+# NOTE: there is no low-level memory management in Python, hence it is
+# not possible to wipe memory areas were sensitive information was stored.
+#==============================================================================
+
+# pyAesCrypt script
+
+import argparse
+import getpass
+from sys import exit
+import pyAesCrypt
+
+maxPassLen = 1024 # maximum password length (number of chars)
+
+# encryption/decryption buffer size - 64K
+bufferSize = 64 * 1024
+    
+# parse command line arguments
+parser = argparse.ArgumentParser(description="Encrypt/decrypt a file using AES256-CBC.")
+parser.add_argument("filename", type=str,
+                    help="file to encrypt/decrypt")
+parser.add_argument("-o","--out", type=str,
+                    default=None, help="specify output file")
+                    
+# encrypt OR decrypt....
+groupED = parser.add_mutually_exclusive_group(required=True)              
+groupED.add_argument("-e", "--encrypt",
+                    help="encrypt file", action="store_true")        
+groupED.add_argument("-d", "--decrypt",
+                    help="decrypt file", action="store_true")         
+args = parser.parse_args()
+
+# prompt the user for password
+passw=str(getpass.getpass("Password:"))
+
+if args.encrypt:
+    # check against max password length
+    if len(passw) > maxPassLen:
+        exit("Error: password is too long")
+        
+    # Check password complexity
+    # here assume that a good password is at least 8 chars long
+    # and includes at least:
+    # 1 lowercase char
+    # 1 uppercase char
+    # 1 digit
+    # 1 symbol
+    if not((len(passw) > 7) and any(c.islower() for c in passw)
+        and any(c.isupper() for c in passw) and any(c.isdigit() for c in passw)
+        and any(not(c.isalnum()) for c in passw)):
+            print("Warning: your password seems weak.")
+            print("A password should be at least 8 chars long and should "
+            "contain at least one lowercase char, one uppercase char, one "
+            "digit and one symbol.")
+    
+    # re-prompt the user for password
+    passwConf=str(getpass.getpass("Confirm password:"))
+    
+    # check the second pass against the first
+    if passw != passwConf:
+        exit("Error: passwords you provided do not match")
+    
+    # open output file
+    if args.out is not None:
+        ofname = args.out
+    else:
+        ofname = args.filename+".aes"
+        
+    # call encryption function
+    pyAesCrypt.encryptFile(args.filename, ofname, passw, bufferSize)
+            
+elif args.decrypt:
+    # open output file
+    if args.out is not None:
+        ofname = args.out
+    elif args.filename.endswith(".aes"):
+        ofname = args.filename[:-4]
+    else:
+        exit("Error: if input file extension is not \".aes\", you should "
+        "provide the output file name through \"-o\" option.")
+    
+    # call decryption function
+    pyAesCrypt.decryptFile(args.filename, ofname, passw, bufferSize)
