@@ -1,6 +1,12 @@
 History
 ===============
 
+0.2.1 (Feb 2017)
+~~~~~~~~~~~~~~~~~~
+* Better exceptions handling
+* Code clean-up
+* More unittests
+
 0.2 (Jan 2017)
 ~~~~~~~~~~~~~~~~~~
 * Modularized pyAesCrypt (and now the script calls the module for operations)

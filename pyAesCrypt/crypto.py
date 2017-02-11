@@ -1,12 +1,12 @@
 #==============================================================================
 # Copyright 2016 Marco Bellaccini - marco.bellaccini[at!]gmail.com
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,16 +15,16 @@
 #==============================================================================
 
 #==============================================================================
-# pyAesCrypt 0.2
-# 
-# pyAesCrypt is a Python file-encryption utility that uses AES256-CBC to 
+# pyAesCrypt
+#
+# pyAesCrypt is a Python file-encryption utility that uses AES256-CBC to
 # encrypt/decrypt files.
 # pyAesCrypt is compatible with the AES Crypt (https://www.aescrypt.com/)
 # file format (version 2).
-# 
-# IMPORTANT SECURITY NOTE: version 2 of the AES Crypt file format does not  
-# authenticate the "file size modulo 16" byte. This implies that an attacker  
-# with write access to the encrypted file may alter the corresponding plaintext 
+#
+# IMPORTANT SECURITY NOTE: version 2 of the AES Crypt file format does not
+# authenticate the "file size modulo 16" byte. This implies that an attacker
+# with write access to the encrypted file may alter the corresponding plaintext
 # file size by up to 15 bytes.
 #
 # NOTE: there is no low-level memory management in Python, hence it is
@@ -37,10 +37,11 @@ from Crypto.Hash import SHA256
 from Crypto.Hash import HMAC
 from Crypto.Cipher import AES
 from Crypto import Random
-from sys import exit
 from os import stat
 from os import remove
-import atexit
+
+# pyAesCrypt version
+version = "0.2.1"
 
 # encryption/decryption buffer size - 64K
 bufferSize = 64 * 1024
@@ -48,16 +49,18 @@ bufferSize = 64 * 1024
 # maximum password length (number of chars)
 maxPassLen = 1024
 
+
 # password stretching function
 def stretch(passw, iv1):
+    
     # hash the external iv and the password 8192 times
-    digest=iv1+(16*b"\x00")
+    digest = iv1 + (16 * b"\x00")
     
     for i in range(8192):
-        passHash=SHA256.new()
+        passHash = SHA256.new()
         passHash.update(digest)
-        passHash.update(bytes(passw,"utf_16_le"))
-        digest=passHash.digest()
+        passHash.update(bytes(passw, "utf_16_le"))
+        digest = passHash.digest()
     
     return digest
 
@@ -67,24 +70,32 @@ def stretch(passw, iv1):
 # infile: plaintext file path
 # outfile: ciphertext file path
 # passw: encryption password
-# bufferSize: encryption buffer size, must be a multiple of AES block size (16)
-#             using a larger buffer speeds up things when dealing with big files
+# bufferSize: encryption buffer size, must be a multiple of
+#             AES block size (16)
+#             using a larger buffer speeds up things when dealing
+#             with big files
 def encryptFile(infile, outfile, passw, bufferSize):
-    assert bufferSize % AES.block_size == 0, "Buffer size must be a multiple of AES block size."
-    assert len(passw) <= maxPassLen, "Password is too long."
+    # validate bufferSize
+    if bufferSize % AES.block_size != 0:
+        raise ValueError("Buffer size must be a multiple of AES block size.")
+    
+    if len(passw) > maxPassLen:
+        raise ValueError("Password is too long.")
+    
     try:
-        with open(infile,"rb") as fIn:
+        with open(infile, "rb") as fIn:
             # initialize random number generator
-            # using pycrypto cryptographic PRNG (based on "Fortuna" by N. Ferguson 
-            # and B. Schneier, with the OS RNG, time.clock() and time.time() as
-            # entropy sources)
+            # using pycrypto cryptographic PRNG (based on "Fortuna" by
+            # N. Ferguson and B. Schneier, with the OS RNG, time.clock()
+            # and time.time() as entropy sources)
             rng = Random.new()
             
-            # generate external iv (used to encrypt the main iv and the encryption key)
+            # generate external iv (used to encrypt the main iv and the
+            # encryption key)
             iv1 = rng.read(AES.block_size)
             
             # stretch password and iv
-            key=stretch(passw, iv1)
+            key = stretch(passw, iv1)
             
             # generate random main iv
             iv0 = rng.read(AES.block_size)
@@ -109,24 +120,26 @@ def encryptFile(infile, outfile, passw, bufferSize):
             hmac1.update(c_iv_key)
             
             try:
-                with open(outfile,"wb") as fOut: 
+                with open(outfile, "wb") as fOut:
                     # write header
                     fOut.write(bytes("AES", "utf8"))
                     
-                    # write version (AES Crypt version 2 file format: https://www.aescrypt.com/aes_file_format.html)
+                    # write version (AES Crypt version 2 file format -
+                    # see https://www.aescrypt.com/aes_file_format.html)
                     fOut.write(b"\x02")
                     
                     # reserved byte (set to zero)
                     fOut.write(b"\x00")
                     
                     # setup "CREATED-BY" extension
-                    cby="pyAesCrypt 0.2"
+                    cby = "pyAesCrypt " + version
                     
                     # write "CREATED-BY" extension length
                     fOut.write(b"\x00" + bytes([1+len("CREATED_BY"+cby)]))
                     
                     # write "CREATED-BY" extension
-                    fOut.write(bytes("CREATED_BY", "utf8") + b"\x00" + bytes(cby, "utf8"))
+                    fOut.write(bytes("CREATED_BY", "utf8") + b"\x00" +
+                               bytes(cby, "utf8"))
                     
                     # write "container" extension length
                     fOut.write(b"\x00\x80")
@@ -138,7 +151,8 @@ def encryptFile(infile, outfile, passw, bufferSize):
                     # write end-of-extensions tag
                     fOut.write(b"\x00\x00")
                     
-                    # write the iv used to encrypt the main iv and the encryption key
+                    # write the iv used to encrypt the main iv and the
+                    # encryption key
                     fOut.write(iv1)
                     
                     # write encrypted main iv and key
@@ -160,7 +174,8 @@ def encryptFile(infile, outfile, passw, bufferSize):
                             # file size mod 16, lsb positions
                             fs16 = bytes([bytesRead % AES.block_size])
                             # pad data (this is NOT PKCS#7!)
-                            # ...unless no bytes or a multiple of a block size of bytes was read
+                            # ...unless no bytes or a multiple of a block size
+                            # of bytes was read
                             if bytesRead % AES.block_size == 0:
                                 padLen = 0
                             else:
@@ -183,7 +198,6 @@ def encryptFile(infile, outfile, passw, bufferSize):
                             # write encrypted file content
                             fOut.write(cText)
                     
-                    
                     # write plaintext file size mod 16 lsb positions
                     fOut.write(fs16)
                     
@@ -191,37 +205,48 @@ def encryptFile(infile, outfile, passw, bufferSize):
                     fOut.write(hmac0.digest())
                         
             except IOError:
-                exit("Error: unable to write output file.")
+                raise IOError("Unable to write output file.")
             
     except IOError:
-        exit("Error: file \"" + infile + "\" was not found.")
+        raise IOError("File \"" + infile + "\" was not found.")
             
+
 # decrypting function
 # arguments:
 # infile: ciphertext file path
 # outfile: plaintext file path
 # passw: encryption password
 # bufferSize: decryption buffer size, must be a multiple of AES block size (16)
-#             using a larger buffer speeds up things when dealing with big files
+#             using a larger buffer speeds up things when dealing with
+#             big files
 def decryptFile(infile, outfile, passw, bufferSize):
-    assert bufferSize % AES.block_size == 0, "Buffer size must be a multiple of AES block size"
-    assert len(passw) <= maxPassLen, "Password is too long."
+    # validate bufferSize
+    if bufferSize % AES.block_size != 0:
+        raise ValueError("Buffer size must be a multiple of AES block size")
+    
+    if len(passw) > maxPassLen:
+        raise ValueError("Password is too long.")
+    
+    # get input file size
+    inputFileSize = stat(infile).st_size
+    
     try:
-        with open(infile,"rb") as fIn:
+        with open(infile, "rb") as fIn:
             fdata = fIn.read(3)
             # check if file is in AES Crypt format (also min length check)
-            if fdata != bytes("AES","utf8") or stat(infile).st_size < 136:
-                exit("Error: file is corrupted or "
-                "not an AES Crypt (or pyAesCrypt) file.")
+            if (fdata != bytes("AES", "utf8") or inputFileSize < 136):
+                    raise ValueError("File is corrupted or not an AES Crypt "
+                                     "(or pyAesCrypt) file.")
                 
             # check if file is in AES Crypt format, version 2
             # (the only one compatible with pyAesCrypt)
             fdata = fIn.read(1)
-            if len(fdata) < 1:
-                exit("Error: file is corrupted.")
+            if len(fdata) != 1:
+                raise ValueError("File is corrupted.")
+            
             if fdata != b"\x02":
-                exit("Error: pyAesCrypt is only compatible with version 2 of the "
-                "AES Crypt file format.")
+                raise ValueError("pyAesCrypt is only compatible with version "
+                                 "2 of the AES Crypt file format.")
             
             # skip reserved byte
             fIn.read(1)
@@ -229,29 +254,29 @@ def decryptFile(infile, outfile, passw, bufferSize):
             # skip all the extensions
             while True:
                 fdata = fIn.read(2)
-                if len(fdata) < 2:
-                    exit("Error: file is corrupted.")
+                if len(fdata) != 2:
+                    raise ValueError("File is corrupted.")
                 if fdata == b"\x00\x00":
                     break
                 fIn.read(int.from_bytes(fdata, byteorder="big"))
                 
             # read external iv
             iv1 = fIn.read(16)
-            if len(iv1) < 16:
-                exit("Error: file is corrupted.")
+            if len(iv1) != 16:
+                raise ValueError("File is corrupted.")
             
             # stretch password and iv
-            key=stretch(passw, iv1)
+            key = stretch(passw, iv1)
             
             # read encrypted main iv and key
             c_iv_key = fIn.read(48)
-            if len(c_iv_key) < 48:
-                exit("Error: file is corrupted.")
+            if len(c_iv_key) != 48:
+                raise ValueError("File is corrupted.")
                 
             # read HMAC-SHA256 of the encrypted iv and key
             hmac1 = fIn.read(32)
-            if len(hmac1) < 32:
-                exit("Error: file is corrupted.")
+            if len(hmac1) != 32:
+                raise ValueError("File is corrupted.")
             
             # compute actual HMAC-SHA256 of the encrypted iv and key
             hmac1Act = HMAC.new(key, digestmod=SHA256)
@@ -259,7 +284,7 @@ def decryptFile(infile, outfile, passw, bufferSize):
             
             # HMAC check
             if hmac1 != hmac1Act.digest():
-                exit("Error: wrong password (or file is corrupted).")
+                raise ValueError("Wrong password (or file is corrupted).")
             
             # instantiate AES cipher
             cipher1 = AES.new(key, AES.MODE_CBC, iv1)
@@ -272,20 +297,13 @@ def decryptFile(infile, outfile, passw, bufferSize):
             intKey = iv_key[16:]
             
             # instantiate another AES cipher
-            cipher0 = AES.new(intKey, AES.MODE_CBC, iv0) 
+            cipher0 = AES.new(intKey, AES.MODE_CBC, iv0)
             
             # instantiate actual HMAC-SHA256 of the ciphertext
             hmac0Act = HMAC.new(intKey, digestmod=SHA256)
                 
             try:
-                with open(outfile,"wb") as fOut: 
-                    # register delete output file as cleanup function
-                    # (so that, if fails, deletes output file)
-                    atexit.register(remove, outfile)
-                    
-                    # get input file size
-                    inputFileSize = stat(infile).st_size
-                    
+                with open(outfile, "wb") as fOut:                    
                     while fIn.tell() < inputFileSize - 32 - 1 - bufferSize:
                         # read data
                         cText = fIn.read(bufferSize)
@@ -305,10 +323,14 @@ def decryptFile(infile, outfile, passw, bufferSize):
                         
                     # last block reached, remove padding if needed
                     # read last block
-                    if fIn.tell() != inputFileSize - 32 - 1: # this is for empty files
+                    
+                    # this is for empty files
+                    if fIn.tell() != inputFileSize - 32 - 1:
                         cText = fIn.read(AES.block_size)
                         if len(cText) < AES.block_size:
-                            exit("Error: file is corrupted.")
+                            # remove outfile and raise exception
+                            remove(outfile)
+                            raise ValueError("File is corrupted.")
                     else:
                         cText = bytes()
                     
@@ -317,34 +339,37 @@ def decryptFile(infile, outfile, passw, bufferSize):
                     
                     # read plaintext file size mod 16 lsb positions
                     fs16 = fIn.read(1)
-                    if len(fs16) < 1:
-                        exit("Error: file is corrupted.")
+                    if len(fs16) != 1:
+                        # remove outfile and raise exception
+                        remove(outfile)
+                        raise ValueError("File is corrupted.")
                     
                     # decrypt last block
                     pText = cipher0.decrypt(cText)
                     
                     # remove padding
-                    toremove=((16-fs16[0])%16)
+                    toremove = ((16 - fs16[0]) % 16)
                     if toremove != 0:
-                        pText=pText[:-toremove]
+                        pText = pText[:-toremove]
                         
                     # write decrypted data to output file
                     fOut.write(pText)
                     
                     # read HMAC-SHA256 of the encrypted file
                     hmac0 = fIn.read(32)
-                    if len(hmac0) < 32:
-                        exit("Error: file is corrupted.")
-                        
+                    if len(hmac0) != 32:
+                        # remove outfile and raise exception
+                        remove(outfile)
+                        raise ValueError("File is corrupted.")
+                    
                     # HMAC check
                     if hmac0 != hmac0Act.digest():
-                        exit("Error: bad HMAC (file is corrupted).")
-                    
-                    # unregister output file removal
-                    # i.e.: success, output file is valid
-                    atexit.unregister(remove)
+                        # remove outfile and raise exception
+                        remove(outfile)
+                        raise ValueError("Bad HMAC (file is corrupted).")
                     
             except IOError:
-                exit("Error: unable to write output file.")            
+                raise IOError("Unable to write output file.")
+                
     except IOError:
-        exit("Error: file \"" + infile + "\" was not found.")
+        raise IOError("File \"" + infile + "\" was not found.")

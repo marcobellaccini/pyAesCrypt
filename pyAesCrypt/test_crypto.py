@@ -1,12 +1,12 @@
 #==============================================================================
 # Copyright 2016 Marco Bellaccini - marco.bellaccini[at!]gmail.com
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,8 @@ import os
 import shutil
 import filecmp
 import subprocess
+from os import stat
+from os.path import isfile
 import pyAesCrypt
 
 # test file directory name
@@ -36,13 +38,14 @@ encsuffix = '.aes'
 decsuffix = '.decr'
 
 # file names
-filenames = [prefix+'empty', prefix+'block', prefix+'defbuffer', prefix+'small', prefix+'med', prefix+'tbuf']
+filenames = [prefix+'empty', prefix+'block', prefix+'defbuffer',
+             prefix+'small', prefix+'med', prefix+'tbuf']
 
 # generate encrypted file names
 encfilenames = list()
 for f in filenames:
     encfilenames.append(f+encsuffix)
-    
+
 # generate decrypted file names
 decfilenames = list()
 for f in filenames:
@@ -54,7 +57,8 @@ bufferSize = 64 * 1024
 # test password
 password = "foopassword!1$A"
 
-# generate test files
+
+# function for generating test files
 def genTestFiles():
     # empty file
     with open(filenames[0], 'wb') as fout:
@@ -74,8 +78,27 @@ def genTestFiles():
     # 3-buffer sized file
     with open(filenames[5], 'wb') as fout:
         fout.write(os.urandom(3*bufferSize))
-        
-# tests encryption and decryption
+
+
+# function for corrupting files
+def corruptFile(fp, offset):
+    # open file
+    with open(fp, 'r+b') as ftc:
+        # get to the byte to corrupt
+        ftc.seek(offset)
+        # read the byte
+        rb = ftc.read(1)
+        # back to the byte to corrupt
+        ftc.seek(offset)
+        # if byte is 'X', overwrite with 'Y'
+        if rb == b'\x58':
+            ftc.write(b'\x59')
+        # else overwrite with 'X'
+        else:
+            ftc.write(b'\x58')
+
+
+# test encryption and decryption
 # NOTE: SOME TESTS REQUIRE AES CRYPT INSTALLED, WITH ITS BINARY IN $PATH
 class TestEncDec(unittest.TestCase):
     # fixture for preparing the environment
@@ -108,7 +131,7 @@ class TestEncDec(unittest.TestCase):
             # decrypt file
             pyAesCrypt.decryptFile(ct, ou, password, bufferSize)
             # check that the original file and the output file are equal
-            self.assertTrue(filecmp.cmp(pt,ou))
+            self.assertTrue(filecmp.cmp(pt, ou))
             
     # test encryption with pyAesCrypt and decryption with AES Crypt
     def test_enc_pyAesCrypt_dec_AesCrypt(self):
@@ -118,7 +141,7 @@ class TestEncDec(unittest.TestCase):
             # decrypt file
             subprocess.call(["aescrypt", "-d", "-p", password, "-o", ou, ct])
             # check that the original file and the output file are equal
-            self.assertTrue(filecmp.cmp(pt,ou))
+            self.assertTrue(filecmp.cmp(pt, ou))
             
     # test encryption with AES Crypt and decryption with pyAesCrypt
     def test_enc_AesCrypt_dec_pyAesCrypt(self):
@@ -128,8 +151,131 @@ class TestEncDec(unittest.TestCase):
             # decrypt file
             pyAesCrypt.decryptFile(ct, ou, password, bufferSize)
             # check that the original file and the output file are equal
-            self.assertTrue(filecmp.cmp(pt,ou))
+            self.assertTrue(filecmp.cmp(pt, ou))
 
+
+# test exceptions
+class TestExceptions(unittest.TestCase):
+    
+    # test file path
+    tfile = prefix+'test.txt'
+    
+    # fixture for preparing the environment
+    def setUp(self):
+        # make directory for test files
+        try:
+            os.mkdir(tfdirname)
+        # if directory exists, delete and re-create it
+        except FileExistsError:
+            # remove whole tree
+            shutil.rmtree(tfdirname)
+            os.mkdir(tfdirname)
+        # generate a test file
+        with open(self.tfile, 'wb') as fout:
+            fout.write(os.urandom(4))
+        
+    def tearDown(self):
+        # remove whole directory tree
+        shutil.rmtree(tfdirname)
+    
+    # test decryption with wrong password
+    def test_dec_wrongpass(self):
+        # encrypt file
+        pyAesCrypt.encryptFile(self.tfile, self.tfile+'.aes', password,
+                               bufferSize)
+        # try to decrypt file using a wrong password
+        # and check that ValueError is raised
+        self.assertRaisesRegex(ValueError, ("Wrong password "
+                                                "\(or file is corrupted\)."),
+                               pyAesCrypt.decryptFile,
+                               self.tfile + '.aes', self.tfile + '.decr',
+                               'wrongpass', bufferSize)
+                               
+        # check that decrypted file was not created
+        self.assertFalse(isfile(self.tfile + '.decr'))
+            
+    # test decryption of a non-AES-Crypt-format file
+    def test_dec_not_AesCrypt_format(self):
+        # encrypt file
+        pyAesCrypt.encryptFile(self.tfile, self.tfile+'.aes', password,
+                               bufferSize)
+        # corrupt the 2nd byte (the 'E' of 'AES') - offset is 2-1=1
+        corruptFile(self.tfile+'.aes', 1)
+        
+        # try to decrypt file
+        # ...and check that ValueError is raised
+        self.assertRaisesRegex(ValueError, ("File is corrupted or "
+                                                "not an AES Crypt "
+                                                "\(or pyAesCrypt\) file."),
+                               pyAesCrypt.decryptFile,
+                               self.tfile + '.aes', self.tfile + '.decr',
+                               password, bufferSize)
+        
+        # check that decrypted file was not created
+        self.assertFalse(isfile(self.tfile + '.decr'))
+            
+    # test decryption of an unsupported version of AES Crypt format
+    def test_dec_unsupported_AesCrypt_format(self):
+        # encrypt file
+        pyAesCrypt.encryptFile(self.tfile, self.tfile+'.aes', password,
+                               bufferSize)
+        # corrupt the 4th byte
+        corruptFile(self.tfile+'.aes', 3)
+        
+        # try to decrypt file
+        # ...and check that ValueError is raised
+        self.assertRaisesRegex(ValueError, ("pyAesCrypt is only "
+                                                "compatible with version 2 of "
+                                                "the AES Crypt file format."),
+                               pyAesCrypt.decryptFile, self.tfile + '.aes',
+                               self.tfile + '.decr', password, bufferSize)
+                               
+        # check that decrypted file was not created
+        self.assertFalse(isfile(self.tfile + '.decr'))
+            
+    # test decryption of a file with bad hmac
+    def test_dec_bad_hmac(self):
+        # encrypt file
+        pyAesCrypt.encryptFile(self.tfile, self.tfile+'.aes', password,
+                               bufferSize)
+                               
+        # get file size
+        fsize = stat(self.tfile+'.aes').st_size
+        
+        # corrupt hmac
+        corruptFile(self.tfile+'.aes', fsize-1)
+        
+        # try to decrypt file
+        # ...and check that ValueError is raised
+        self.assertRaisesRegex(ValueError, ("Bad HMAC "
+                                                "\(file is corrupted\)."),
+                               pyAesCrypt.decryptFile, self.tfile + '.aes',
+                               self.tfile + '.decr', password, bufferSize)
+                               
+        # check that decrypted file was deleted
+        self.assertFalse(isfile(self.tfile + '.decr'))
+            
+    # test decryption of a truncated file (no complete hmac)
+    def test_dec_trunc_file(self):
+        # encrypt file
+        pyAesCrypt.encryptFile(self.tfile, self.tfile+'.aes', password,
+                               bufferSize)
+                               
+        # get file size
+        fsize = stat(self.tfile+'.aes').st_size
+        
+        # truncate hmac (i.e.: truncate end of the file)
+        with open(self.tfile+'.aes', 'r+b') as ftc:
+            ftc.truncate(fsize-1)
+        
+        # try to decrypt file
+        # ...and check that ValueError is raised
+        self.assertRaisesRegex(ValueError, "File is corrupted.",
+                               pyAesCrypt.decryptFile, self.tfile + '.aes',
+                               self.tfile + '.decr', password, bufferSize)
+                               
+        # check that decrypted file was deleted
+        self.assertFalse(isfile(self.tfile + '.decr'))
+    
 if __name__ == '__main__':
     unittest.main()
-    
