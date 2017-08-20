@@ -54,7 +54,7 @@ parser.add_argument("filename", type=str,
 parser.add_argument("-o", "--out", type=str,
                     default=None, help="specify output file")
 parser.add_argument("-p", "--password", type=str,
-                    default=None, help="speicify the password")
+                    default=None, help="specify the password")
 
 # encrypt OR decrypt....
 groupED = parser.add_mutually_exclusive_group(required=True)
@@ -75,6 +75,10 @@ if args.password == None:
     # prompt the user for password
     passw = str(getpass.getpass("Password:"))
 else:
+    # warn the user
+    print("Warning: passing passwords as plaintext "
+          "command-line arguments may be unsafe.")
+    # get the password from the argument
     passw = args.password
 
 if args.encrypt:
