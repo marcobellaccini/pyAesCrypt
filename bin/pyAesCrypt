@@ -69,9 +69,8 @@ args = parser.parse_args()
 if not isfile(args.filename):
     exit("Error: file \"" + args.filename + "\" was not found.")
 
-passw = None
 # check if the user has not supplied a password
-if args.password == None:
+if not args.password:
     # prompt the user for password
     passw = str(getpass.getpass("Password:"))
 else:
@@ -104,7 +103,7 @@ if args.encrypt:
 
     # re-prompt the user for password
     # if it was not supplied from the command line
-    if args.password == None:
+    if not args.password:
         passwConf = str(getpass.getpass("Confirm password:"))
         # check the second pass against the first
         if passw != passwConf:

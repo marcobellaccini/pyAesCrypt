@@ -1,6 +1,10 @@
 History
 ===============
 
+0.2.2 (Aug 2017)
+~~~~~~~~~~~~~~~~~~
+* Option to pass password as command-line argument to the script
+
 0.2.1 (Feb 2017)
 ~~~~~~~~~~~~~~~~~~
 * Better exceptions handling
