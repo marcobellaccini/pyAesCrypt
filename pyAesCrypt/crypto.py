@@ -86,9 +86,6 @@ def encryptFile(infile, outfile, passw, bufferSize):
     
     if len(passw) > maxPassLen:
         raise ValueError("Password is too long.")
-        
-    # get input file size
-    inputFileSize = stat(infile).st_size
     
     try:
         with open(infile, "rb") as fIn:
