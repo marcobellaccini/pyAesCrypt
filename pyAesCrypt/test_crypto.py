@@ -21,7 +21,6 @@ import os
 import shutil
 import filecmp
 import subprocess
-from os import stat
 from os.path import isfile
 import pyAesCrypt
 
@@ -240,7 +239,7 @@ class TestExceptions(unittest.TestCase):
                                bufferSize)
                                
         # get file size
-        fsize = stat(self.tfile+'.aes').st_size
+        fsize = os.stat(self.tfile+'.aes').st_size
         
         # corrupt hmac
         corruptFile(self.tfile+'.aes', fsize-1)
@@ -262,7 +261,7 @@ class TestExceptions(unittest.TestCase):
                                bufferSize)
                                
         # get file size
-        fsize = stat(self.tfile+'.aes').st_size
+        fsize = os.stat(self.tfile+'.aes').st_size
         
         # truncate hmac (i.e.: truncate end of the file)
         with open(self.tfile+'.aes', 'r+b') as ftc:

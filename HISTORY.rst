@@ -1,6 +1,11 @@
 History
 ===============
 
+0.3 (Aug 2017)
+~~~~~~~~~~~~~~~~~~
+* Switched from `pycrypto`_ to `PyCA Cryptography`_ for crypto primitives
+* Unittests clean-up
+
 0.2.2 (Aug 2017)
 ~~~~~~~~~~~~~~~~~~
 * Option to pass password as command-line argument to the script
@@ -27,3 +32,6 @@ History
 0.1 (Jan 2016)
 ~~~~~~~~~~~~~~~~~~
 * First public release
+
+.. _pycrypto: https://github.com/dlitz/pycrypto
+.. _PyCA Cryptography: https://github.com/pyca/cryptography

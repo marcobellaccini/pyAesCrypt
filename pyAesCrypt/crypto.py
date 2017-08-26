@@ -21,6 +21,9 @@
 # encrypt/decrypt files.
 # pyAesCrypt is compatible with the AES Crypt (https://www.aescrypt.com/)
 # file format (version 2).
+# It uses PyCA Cryptography for crypto primitives and the operating system's
+# random number generator (/dev/urandom on UNIX platforms, CryptGenRandom 
+# on Windows).
 #
 # IMPORTANT SECURITY NOTE: version 2 of the AES Crypt file format does not
 # authenticate the "file size modulo 16" byte. This implies that an attacker
@@ -33,21 +36,23 @@
 
 # pyAesCrypt module
 
-from Crypto.Hash import SHA256
-from Crypto.Hash import HMAC
-from Crypto.Cipher import AES
-from Crypto import Random
-from os import stat
-from os import remove
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from os import urandom
+from os import stat, remove
 
 # pyAesCrypt version
-version = "0.2.1"
+version = "0.3"
 
 # encryption/decryption buffer size - 64K
 bufferSize = 64 * 1024
 
 # maximum password length (number of chars)
 maxPassLen = 1024
+
+# AES block size in bytes
+AESBlockSize = 16
 
 
 # password stretching function
@@ -57,10 +62,10 @@ def stretch(passw, iv1):
     digest = iv1 + (16 * b"\x00")
     
     for i in range(8192):
-        passHash = SHA256.new()
+        passHash = hashes.Hash(hashes.SHA256(), backend=default_backend())
         passHash.update(digest)
         passHash.update(bytes(passw, "utf_16_le"))
-        digest = passHash.digest()
+        digest = passHash.finalize()
     
     return digest
 
@@ -76,47 +81,50 @@ def stretch(passw, iv1):
 #             with big files
 def encryptFile(infile, outfile, passw, bufferSize):
     # validate bufferSize
-    if bufferSize % AES.block_size != 0:
+    if bufferSize % AESBlockSize != 0:
         raise ValueError("Buffer size must be a multiple of AES block size.")
     
     if len(passw) > maxPassLen:
         raise ValueError("Password is too long.")
+        
+    # get input file size
+    inputFileSize = stat(infile).st_size
     
     try:
         with open(infile, "rb") as fIn:
-            # initialize random number generator
-            # using pycrypto cryptographic PRNG (based on "Fortuna" by
-            # N. Ferguson and B. Schneier, with the OS RNG, time.clock()
-            # and time.time() as entropy sources)
-            rng = Random.new()
-            
             # generate external iv (used to encrypt the main iv and the
             # encryption key)
-            iv1 = rng.read(AES.block_size)
+            iv1 = urandom(AESBlockSize)
             
             # stretch password and iv
             key = stretch(passw, iv1)
             
             # generate random main iv
-            iv0 = rng.read(AES.block_size)
+            iv0 = urandom(AESBlockSize)
             
             # generate random internal key
-            intKey = rng.read(32)
+            intKey = urandom(32)
             
             # instantiate AES cipher
-            cipher0 = AES.new(intKey, AES.MODE_CBC, iv0)
+            cipher0 = Cipher(algorithms.AES(intKey), modes.CBC(iv0),
+                             backend=default_backend())
+            encryptor0 = cipher0.encryptor()
             
             # instantiate HMAC-SHA256 for the ciphertext
-            hmac0 = HMAC.new(intKey, digestmod=SHA256)
+            hmac0 = hmac.HMAC(intKey, hashes.SHA256(),
+                              backend=default_backend())
             
             # instantiate another AES cipher
-            cipher1 = AES.new(key, AES.MODE_CBC, iv1)
+            cipher1 = Cipher(algorithms.AES(key), modes.CBC(iv1),
+                             backend=default_backend())
+            encryptor1 = cipher1.encryptor()
             
             # encrypt main iv and key
-            c_iv_key = cipher1.encrypt(iv0 + intKey)
+            c_iv_key = encryptor1.update(iv0 + intKey) + encryptor1.finalize()
             
             # calculate HMAC-SHA256 of the encrypted iv and key
-            hmac1 = HMAC.new(key, digestmod=SHA256)
+            hmac1 = hmac.HMAC(key, hashes.SHA256(),
+                              backend=default_backend())
             hmac1.update(c_iv_key)
             
             try:
@@ -159,7 +167,7 @@ def encryptFile(infile, outfile, passw, bufferSize):
                     fOut.write(c_iv_key)
                     
                     # write HMAC-SHA256 of the encrypted iv and key
-                    fOut.write(hmac1.digest())
+                    fOut.write(hmac1.finalize())
                     
                     # encrypt file while reading it
                     while True:
@@ -172,17 +180,18 @@ def encryptFile(infile, outfile, passw, bufferSize):
                         # check if EOF was reached
                         if bytesRead < bufferSize:
                             # file size mod 16, lsb positions
-                            fs16 = bytes([bytesRead % AES.block_size])
+                            fs16 = bytes([bytesRead % AESBlockSize])
                             # pad data (this is NOT PKCS#7!)
                             # ...unless no bytes or a multiple of a block size
                             # of bytes was read
-                            if bytesRead % AES.block_size == 0:
+                            if bytesRead % AESBlockSize == 0:
                                 padLen = 0
                             else:
-                                padLen = 16 - bytesRead % AES.block_size
+                                padLen = 16 - bytesRead % AESBlockSize
                             fdata += bytes([padLen])*padLen
                             # encrypt data
-                            cText = cipher0.encrypt(fdata)
+                            cText = encryptor0.update(fdata) \
+                                    + encryptor0.finalize()
                             # update HMAC
                             hmac0.update(cText)
                             # write encrypted file content
@@ -192,7 +201,7 @@ def encryptFile(infile, outfile, passw, bufferSize):
                         # ...otherwise a full bufferSize was read
                         else:
                             # encrypt data
-                            cText = cipher0.encrypt(fdata)
+                            cText = encryptor0.update(fdata)                                
                             # update HMAC
                             hmac0.update(cText)
                             # write encrypted file content
@@ -202,7 +211,7 @@ def encryptFile(infile, outfile, passw, bufferSize):
                     fOut.write(fs16)
                     
                     # write HMAC-SHA256 of the encrypted file
-                    fOut.write(hmac0.digest())
+                    fOut.write(hmac0.finalize())
                         
             except IOError:
                 raise IOError("Unable to write output file.")
@@ -221,7 +230,7 @@ def encryptFile(infile, outfile, passw, bufferSize):
 #             big files
 def decryptFile(infile, outfile, passw, bufferSize):
     # validate bufferSize
-    if bufferSize % AES.block_size != 0:
+    if bufferSize % AESBlockSize != 0:
         raise ValueError("Buffer size must be a multiple of AES block size")
     
     if len(passw) > maxPassLen:
@@ -279,28 +288,34 @@ def decryptFile(infile, outfile, passw, bufferSize):
                 raise ValueError("File is corrupted.")
             
             # compute actual HMAC-SHA256 of the encrypted iv and key
-            hmac1Act = HMAC.new(key, digestmod=SHA256)
+            hmac1Act = hmac.HMAC(key, hashes.SHA256(),
+                                 backend=default_backend())
             hmac1Act.update(c_iv_key)
             
             # HMAC check
-            if hmac1 != hmac1Act.digest():
+            if hmac1 != hmac1Act.finalize():
                 raise ValueError("Wrong password (or file is corrupted).")
             
             # instantiate AES cipher
-            cipher1 = AES.new(key, AES.MODE_CBC, iv1)
+            cipher1 = Cipher(algorithms.AES(key), modes.CBC(iv1),
+                             backend=default_backend())
+            decryptor1 = cipher1.decryptor()
             
             # decrypt main iv and key
-            iv_key = cipher1.decrypt(c_iv_key)
+            iv_key = decryptor1.update(c_iv_key) + decryptor1.finalize()
             
             # get internal iv and key
             iv0 = iv_key[:16]
             intKey = iv_key[16:]
             
             # instantiate another AES cipher
-            cipher0 = AES.new(intKey, AES.MODE_CBC, iv0)
+            cipher0 = Cipher(algorithms.AES(intKey), modes.CBC(iv0),
+                             backend=default_backend())
+            decryptor0 = cipher0.decryptor()
             
             # instantiate actual HMAC-SHA256 of the ciphertext
-            hmac0Act = HMAC.new(intKey, digestmod=SHA256)
+            hmac0Act = hmac.HMAC(intKey, hashes.SHA256(),
+                                 backend=default_backend())
                 
             try:
                 with open(outfile, "wb") as fOut:                    
@@ -310,24 +325,24 @@ def decryptFile(infile, outfile, passw, bufferSize):
                         # update HMAC
                         hmac0Act.update(cText)
                         # decrypt data and write it to output file
-                        fOut.write(cipher0.decrypt(cText))
+                        fOut.write(decryptor0.update(cText))
 
                     # decrypt remaining ciphertext, until last block is reached
-                    while fIn.tell() < inputFileSize - 32 - 1 - AES.block_size:
+                    while fIn.tell() < inputFileSize - 32 - 1 - AESBlockSize:
                         # read data
-                        cText = fIn.read(AES.block_size)
+                        cText = fIn.read(AESBlockSize)
                         # update HMAC
                         hmac0Act.update(cText)
                         # decrypt data and write it to output file
-                        fOut.write(cipher0.decrypt(cText))
+                        fOut.write(decryptor0.update(cText))
                         
                     # last block reached, remove padding if needed
                     # read last block
                     
                     # this is for empty files
                     if fIn.tell() != inputFileSize - 32 - 1:
-                        cText = fIn.read(AES.block_size)
-                        if len(cText) < AES.block_size:
+                        cText = fIn.read(AESBlockSize)
+                        if len(cText) < AESBlockSize:
                             # remove outfile and raise exception
                             remove(outfile)
                             raise ValueError("File is corrupted.")
@@ -345,7 +360,7 @@ def decryptFile(infile, outfile, passw, bufferSize):
                         raise ValueError("File is corrupted.")
                     
                     # decrypt last block
-                    pText = cipher0.decrypt(cText)
+                    pText = decryptor0.update(cText) + decryptor0.finalize()
                     
                     # remove padding
                     toremove = ((16 - fs16[0]) % 16)
@@ -363,7 +378,7 @@ def decryptFile(infile, outfile, passw, bufferSize):
                         raise ValueError("File is corrupted.")
                     
                     # HMAC check
-                    if hmac0 != hmac0Act.digest():
+                    if hmac0 != hmac0Act.finalize():
                         # remove outfile and raise exception
                         remove(outfile)
                         raise ValueError("Bad HMAC (file is corrupted).")

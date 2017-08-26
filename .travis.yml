@@ -1,17 +1,16 @@
 language: python
 python:
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
   - "3.7-dev" # 3.7 development branch
   - "nightly" # currently points to 3.7-dev
-# command to install program dependencies (pycrypto) and compatibility test dependencies (AES Crypt)
+# command to install program dependencies (PyCA cryptography) and compatibility test dependencies (AES Crypt)
 install:
-  - pip install pycrypto
-  - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.11.tgz
-  - tar -xzf aescrypt-3.11.tgz
-  - pushd aescrypt-3.11/src && make && sudo make install && popd
+  - pip install cryptography
+  - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.13.tgz
+  - tar -xzf aescrypt-3.13.tgz
+  - pushd aescrypt-3.13/src && make && sudo make install && popd
 
 # command to run tests
 script: python -m unittest discover
