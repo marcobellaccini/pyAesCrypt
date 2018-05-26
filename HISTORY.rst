@@ -1,6 +1,11 @@
 History
 ===============
 
+0.3.1 (May 2018)
+~~~~~~~~~~~~~~~~~~
+* Fixed Python version compatibility classifier
+* Removed useless stat
+
 0.3 (Aug 2017)
 ~~~~~~~~~~~~~~~~~~
 * Switched from `pycrypto`_ to `PyCA Cryptography`_ for crypto primitives

@@ -5,7 +5,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     README = readme.read()
 
 setup(name='pyAesCrypt',
-    version='0.3',
+    version='0.3.1',
     packages = find_packages(),
     include_package_data=True,
     description='Encrypt and decrypt files in AES Crypt format (version 2)',
@@ -19,7 +19,6 @@ setup(name='pyAesCrypt',
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Topic :: Security',
         'Topic :: Security :: Cryptography',
