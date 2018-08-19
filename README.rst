@@ -5,7 +5,7 @@ pyAesCrypt
 
 About pyAesCrypt
 --------------------------
-pyAesCrypt is a Python 3 file-encryption module and script that uses AES256-CBC to encrypt/decrypt files.
+pyAesCrypt is a Python 3 file-encryption module and script that uses AES256-CBC to encrypt/decrypt files and binary streams.
 
 pyAesCrypt is compatible with the `AES Crypt`_ `file format`_ (version 2).
 
@@ -32,6 +32,76 @@ Here is an example showing encryption and decryption of a file:
     pyAesCrypt.encryptFile("data.txt", "data.txt.aes", password, bufferSize)
     # decrypt
     pyAesCrypt.decryptFile("data.txt.aes", "dataout.txt", password, bufferSize)
+
+by calling the stream-oriented functions, you can work with binary streams too:
+
+.. code:: python
+
+    import pyAesCrypt
+    from os import stat, remove
+    # encryption/decryption buffer size - 64K
+    bufferSize = 64 * 1024
+    password = "foopassword"
+    
+    # encrypt
+    with open("data.txt", "rb") as fIn:
+        with open("data.txt.aes", "wb") as fOut:
+            pyAesCrypt.encryptStream(fIn, fOut, password, bufferSize)
+    
+    # get encrypted file size
+    encFileSize = stat("data.txt.aes").st_size
+    
+    # decrypt
+    with open("data.txt.aes", "rb") as fIn:
+        with open("dataout.txt", "wb") as fOut:
+            try:
+                # decrypt file stream
+                pyAesCrypt.decryptStream(fIn, fOut, password, bufferSize, encFileSize)
+            except ValueError:
+                # remove output file on error
+                remove("dataout.txt")
+
+you can also perform in-memory encryption/decryption (using BytesIO):
+
+.. code:: python
+
+    import pyAesCrypt
+    import io
+    
+    bufferSize = 64 * 1024
+    password = "foopassword"
+    
+    # binary data to be encrypted
+    pbdata = b"This is binary plaintext \x00\x01"
+    
+    # input plaintext binary stream
+    fIn = io.BytesIO(pbdata)
+    
+    # initialize ciphertext binary stream
+    fCiph = io.BytesIO()
+    
+    # initialize decrypted binary stream
+    fDec = io.BytesIO()
+    
+    # encrypt stream
+    pyAesCrypt.encryptStream(fIn, fCiph, password, bufferSize)
+    
+    # print encrypted data
+    print("This is the ciphertext:\n" + str(fCiph.getvalue()))
+    
+    # get ciphertext length
+    ctlen = len(fCiph.getvalue())
+    
+    # go back to the start of the ciphertext stream
+    fCiph.seek(0)
+    
+    # decrypt stream
+    pyAesCrypt.decryptStream(fCiph, fDec, password, bufferSize, ctlen)
+    
+    # print decrypted data
+    print("Decrypted data:\n" + str(fDec.getvalue()))
+
+
 
 Script usage examples
 ------------------------

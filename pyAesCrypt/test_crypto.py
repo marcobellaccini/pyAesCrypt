@@ -152,6 +152,50 @@ class TestEncDec(unittest.TestCase):
             # check that the original file and the output file are equal
             self.assertTrue(filecmp.cmp(pt, ou))
 
+# test binary stream functions
+class TestBS(unittest.TestCase):
+    # fixture for preparing the environment
+    def setUp(self):
+        # make directory for test files
+        try:
+            os.mkdir(tfdirname)
+        # if directory exists, delete and re-create it
+        except FileExistsError:
+            # remove whole tree
+            shutil.rmtree(tfdirname)
+            os.mkdir(tfdirname)
+        # generate a test file
+        with open(filenames[4], 'wb') as fout:
+            fout.write(os.urandom(2*bufferSize+19))
+        
+    def tearDown(self):
+        # delete test files
+        os.remove(filenames[4])
+        os.remove(encfilenames[4])
+        os.remove(decfilenames[4])
+        # delete directory for test files
+        os.rmdir(tfdirname)
+    
+    # quick test for binary stream functions
+    def test_bs_quick(self):
+        # encrypt
+        with open(filenames[4], "rb") as fIn:
+            with open(encfilenames[4], "wb") as fOut:
+                pyAesCrypt.encryptStream(fIn, fOut, password, bufferSize)
+        
+        # get encrypted file size
+        encFileSize = os.stat(encfilenames[4]).st_size
+        
+        # decrypt
+        with open(encfilenames[4], "rb") as fIn:
+            with open(decfilenames[4], "wb") as fOut:
+                # decrypt file stream
+                pyAesCrypt.decryptStream(fIn, fOut, password, bufferSize,
+                                         encFileSize)
+
+        # check that the original file and the output file are equal
+        self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
+
 
 # test exceptions
 class TestExceptions(unittest.TestCase):

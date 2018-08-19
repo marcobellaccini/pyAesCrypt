@@ -5,10 +5,10 @@ with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     README = readme.read()
 
 setup(name='pyAesCrypt',
-    version='0.3.1',
+    version='0.4',
     packages = find_packages(),
     include_package_data=True,
-    description='Encrypt and decrypt files in AES Crypt format (version 2)',
+    description='Encrypt and decrypt files and streams in AES Crypt format (version 2)',
     long_description = README,
     author='Marco Bellaccini',
     url='https://github.com/marcobellaccini/pyAesCrypt',

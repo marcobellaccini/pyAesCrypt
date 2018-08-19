@@ -1,1 +1,1 @@
-from .crypto import encryptFile, decryptFile
+from .crypto import encryptFile, decryptFile, encryptStream, decryptStream

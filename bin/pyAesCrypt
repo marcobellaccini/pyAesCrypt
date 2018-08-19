@@ -20,7 +20,7 @@
 # pyAesCrypt
 #
 # pyAesCrypt is a Python file-encryption utility that uses AES256-CBC to
-# encrypt/decrypt files.
+# encrypt/decrypt files and binary streams.
 # pyAesCrypt is compatible with the AES Crypt (https://www.aescrypt.com/)
 # file format (version 2).
 #

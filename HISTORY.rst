@@ -1,6 +1,10 @@
 History
 ===============
 
+0.4 (Aug 2018)
+~~~~~~~~~~~~~~~~~~
+* Support for binary stream encryption/decryption
+
 0.3.1 (May 2018)
 ~~~~~~~~~~~~~~~~~~
 * Fixed Python version compatibility classifier
