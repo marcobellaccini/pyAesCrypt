@@ -320,15 +320,15 @@ class TestExceptions(unittest.TestCase):
         # check that decrypted file was deleted
         self.assertFalse(isfile(self.tfile + '.decr'))
     
-    # test same input and output stream - encryption
-    def test_samestream_enc(self):
+    # test same input and output file - encryption
+    def test_samefile_enc(self):
         self.assertRaisesRegex(ValueError, ("Input and output files "
                                             "are the same."),
                                pyAesCrypt.encryptFile,
                                self.tfile, self.tfile,
                                'pass', bufferSize)
-    # test same input and output stream - decryption
-    def test_samestream_dec(self):
+    # test same input and output file - decryption
+    def test_samefile_dec(self):
         self.assertRaisesRegex(ValueError, ("Input and output files "
                                             "are the same."),
                                pyAesCrypt.decryptFile,
