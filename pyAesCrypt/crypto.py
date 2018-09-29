@@ -258,7 +258,8 @@ def decryptFile(infile, outfile, passw, bufferSize):
                                       inputFileSize)
                     except ValueError as exd:
                         # remove output file on error
-                        remove(outfile)
+                        if infile != outfile:
+                            remove(outfile)
                         # re-raise exception
                         raise ValueError(str(exd))
             
