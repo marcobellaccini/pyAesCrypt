@@ -2,6 +2,8 @@ pyAesCrypt
 ===============
 .. image:: https://travis-ci.org/marcobellaccini/pyAesCrypt.svg?branch=master
     :target: https://travis-ci.org/marcobellaccini/pyAesCrypt
+.. image:: https://pepy.tech/badge/pyaescrypt
+    :target: https://pepy.tech/project/pyaescrypt
 
 About pyAesCrypt
 --------------------------
@@ -9,7 +11,7 @@ pyAesCrypt is a Python 3 file-encryption module and script that uses AES256-CBC 
 
 pyAesCrypt is compatible with the `AES Crypt`_ `file format`_ (version 2).
 
-The script is Free Software, released under the `Apache License, Version 2.0`_.
+It is Free Software, released under the `Apache License, Version 2.0`_.
 
 pyAesCrypt is brought to you by Marco Bellaccini - marco.bellaccini(at!)gmail.com.
  
