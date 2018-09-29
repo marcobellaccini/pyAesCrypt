@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright 2016 Marco Bellaccini - marco.bellaccini[at!]gmail.com
+# Copyright 2018 Marco Bellaccini - marco.bellaccini[at!]gmail.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,10 +40,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from os import urandom
-from os import stat, remove
+from os import stat, remove, path
 
 # pyAesCrypt version
-version = "0.4"
+version = "0.4.1"
 
 # encryption/decryption buffer size - 64K
 bufferSize = 64 * 1024
@@ -83,6 +83,10 @@ def encryptFile(infile, outfile, passw, bufferSize):
         with open(infile, "rb") as fIn:
             try:
                 with open(outfile, "wb") as fOut:
+                    # check if input and output files are the same
+                    if path.samefile(infile, outfile):
+                        raise ValueError("Input and output files "
+                                         "are the same.")
                     # encrypt file stream
                     encryptStream(fIn, fOut, passw, bufferSize)
                 
@@ -242,6 +246,10 @@ def decryptFile(infile, outfile, passw, bufferSize):
         with open(infile, "rb") as fIn:
             try:
                 with open(outfile, "wb") as fOut:
+                    # check if input and output files are the same
+                    if path.samefile(infile, outfile):
+                        raise ValueError("Input and output files "
+                                         "are the same.")
                     # get input file size
                     inputFileSize = stat(infile).st_size
                     try:

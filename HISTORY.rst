@@ -1,6 +1,10 @@
 History
 ===============
 
+0.4.1 (Sep 2018)
+~~~~~~~~~~~~~~~~~~
+* Preventing users from specifying the same input and output file 
+
 0.4 (Aug 2018)
 ~~~~~~~~~~~~~~~~~~
 * Support for binary stream encryption/decryption

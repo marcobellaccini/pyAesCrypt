@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright 2016 Marco Bellaccini - marco.bellaccini[at!]gmail.com
+# Copyright 2018 Marco Bellaccini - marco.bellaccini[at!]gmail.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -319,6 +319,21 @@ class TestExceptions(unittest.TestCase):
                                
         # check that decrypted file was deleted
         self.assertFalse(isfile(self.tfile + '.decr'))
+    
+    # test same input and output stream - encryption
+    def test_samestream_enc(self):
+        self.assertRaisesRegex(ValueError, ("Input and output files "
+                                            "are the same."),
+                               pyAesCrypt.encryptFile,
+                               self.tfile, self.tfile,
+                               'pass', bufferSize)
+    # test same input and output stream - decryption
+    def test_samestream_dec(self):
+        self.assertRaisesRegex(ValueError, ("Input and output files "
+                                            "are the same."),
+                               pyAesCrypt.decryptFile,
+                               self.tfile, self.tfile,
+                               'pass', bufferSize)
     
 if __name__ == '__main__':
     unittest.main()
