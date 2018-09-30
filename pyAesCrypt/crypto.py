@@ -43,7 +43,7 @@ from os import urandom
 from os import stat, remove, path
 
 # pyAesCrypt version
-version = "0.4.1"
+version = "0.4.2"
 
 # encryption/decryption buffer size - 64K
 bufferSize = 64 * 1024
@@ -81,12 +81,15 @@ def stretch(passw, iv1):
 def encryptFile(infile, outfile, passw, bufferSize):
     try:
         with open(infile, "rb") as fIn:
+            # check that output file does not exist
+            # or that, if exists, is not the same as the input file
+            # (i.e.: overwrite if it seems safe)
+            if path.isfile(outfile):
+                if path.samefile(infile, outfile):
+                    raise ValueError("Input and output files "
+                                     "are the same.")
             try:
                 with open(outfile, "wb") as fOut:
-                    # check if input and output files are the same
-                    if path.samefile(infile, outfile):
-                        raise ValueError("Input and output files "
-                                         "are the same.")
                     # encrypt file stream
                     encryptStream(fIn, fOut, passw, bufferSize)
                 
@@ -244,12 +247,15 @@ def encryptStream(fIn, fOut, passw, bufferSize):
 def decryptFile(infile, outfile, passw, bufferSize):
     try:
         with open(infile, "rb") as fIn:
+            # check that output file does not exist
+            # or that, if exists, is not the same as the input file
+            # (i.e.: overwrite if it seems safe)
+            if path.isfile(outfile):
+                if path.samefile(infile, outfile):
+                    raise ValueError("Input and output files "
+                                     "are the same.")
             try:
                 with open(outfile, "wb") as fOut:
-                    # check if input and output files are the same
-                    if path.samefile(infile, outfile):
-                        raise ValueError("Input and output files "
-                                         "are the same.")
                     # get input file size
                     inputFileSize = stat(infile).st_size
                     try:

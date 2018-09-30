@@ -1,6 +1,10 @@
 History
 ===============
 
+0.4.2 (Sep 2018)
+~~~~~~~~~~~~~~~~~~
+* Fixed bug when handling same input and output file 
+
 0.4.1 (Sep 2018)
 ~~~~~~~~~~~~~~~~~~
 * Preventing users from specifying the same input and output file 

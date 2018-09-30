@@ -201,7 +201,10 @@ class TestBS(unittest.TestCase):
 class TestExceptions(unittest.TestCase):
     
     # test file path
-    tfile = prefix+'test.txt'
+    tfile = prefix + 'test.txt'
+    
+    # path of the copy of the test file
+    tfilebak = tfile + '.bak'
     
     # fixture for preparing the environment
     def setUp(self):
@@ -216,6 +219,8 @@ class TestExceptions(unittest.TestCase):
         # generate a test file
         with open(self.tfile, 'wb') as fout:
             fout.write(os.urandom(4))
+        # copy of the test file
+        shutil.copyfile(self.tfile, self.tfilebak)
         
     def tearDown(self):
         # remove whole directory tree
@@ -327,6 +332,8 @@ class TestExceptions(unittest.TestCase):
                                pyAesCrypt.encryptFile,
                                self.tfile, self.tfile,
                                'pass', bufferSize)
+        # check that the original file was not modified
+        self.assertTrue(filecmp.cmp(self.tfile, self.tfilebak))
     # test same input and output file - decryption
     def test_samefile_dec(self):
         self.assertRaisesRegex(ValueError, ("Input and output files "
@@ -334,6 +341,8 @@ class TestExceptions(unittest.TestCase):
                                pyAesCrypt.decryptFile,
                                self.tfile, self.tfile,
                                'pass', bufferSize)
+        # check that the original file was not modified
+        self.assertTrue(filecmp.cmp(self.tfile, self.tfilebak))
     
 if __name__ == '__main__':
     unittest.main()
