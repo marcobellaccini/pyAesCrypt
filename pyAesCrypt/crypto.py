@@ -263,13 +263,17 @@ def decryptFile(infile, outfile, passw, bufferSize):
                         decryptStream(fIn, fOut, passw, bufferSize,
                                       inputFileSize)
                     except ValueError as exd:
-                        # remove output file on error
-                        remove(outfile)
+                        # should not remove output file here because it is still in use
                         # re-raise exception
                         raise ValueError(str(exd))
             
             except IOError:
                 raise IOError("Unable to write output file.")
+            except ValueError as exd:
+                # remove output file on error
+                remove(outfile)
+                # re-raise exception
+                raise ValueError(str(exd))
                 
     except IOError:
         raise IOError("File \"" + infile + "\" was not found.")
