@@ -1,6 +1,10 @@
 History
 ===============
 
+0.4.3 (Apr 2019)
+~~~~~~~~~~~~~~~~~~
+* Fixed bug when deleting bad output file (this was unnoticeable when running on GNU/Linux)
+
 0.4.2 (Sep 2018)
 ~~~~~~~~~~~~~~~~~~
 * Fixed bug when handling same input and output file 
