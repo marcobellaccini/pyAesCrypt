@@ -55,13 +55,13 @@ by calling the stream-oriented functions, you can work with binary streams too:
     
     # decrypt
     with open("data.txt.aes", "rb") as fIn:
-        with open("dataout.txt", "wb") as fOut:
-            try:
+        try:
+            with open("dataout.txt", "wb") as fOut:
                 # decrypt file stream
                 pyAesCrypt.decryptStream(fIn, fOut, password, bufferSize, encFileSize)
-            except ValueError:
-                # remove output file on error
-                remove("dataout.txt")
+        except ValueError:
+            # remove output file on error
+            remove("dataout.txt")
 
 you can also perform in-memory encryption/decryption (using BytesIO):
 
