@@ -43,7 +43,7 @@ from os import urandom
 from os import stat, remove, path
 
 # pyAesCrypt version
-version = "0.4.2"
+version = "0.4.3"
 
 # encryption/decryption buffer size - 64K
 bufferSize = 64 * 1024
