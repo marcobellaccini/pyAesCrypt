@@ -123,6 +123,16 @@ Decrypt file test.txt.aes in test2.txt:
 
 	pyAesCrypt -d test.txt.aes -o test2.txt
 
+FAQs
+------------------------
+- *Is pyAesCrypt malware?*
+
+  **NO!** Of course it isn't!
+
+  Nevertheless, being a module, it can be used by any other software, including malware.
+  
+  In fact, it has been reported that it is used as crypto library by some ransomware.
+
 .. _AES Crypt: https://www.aescrypt.com
 .. _file format: https://www.aescrypt.com/aes_file_format.html
 .. _Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
