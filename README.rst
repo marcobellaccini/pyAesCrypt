@@ -35,7 +35,9 @@ Here is an example showing encryption and decryption of a file:
     # decrypt
     pyAesCrypt.decryptFile("data.txt.aes", "dataout.txt", password, bufferSize)
 
-by calling the stream-oriented functions, you can work with binary streams too:
+This is the most straightforward way to use pyAesCrypt, and should be preferred.
+
+In case you need it, you can work with binary streams too:
 
 .. code:: python
 
