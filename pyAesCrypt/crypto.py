@@ -289,32 +289,45 @@ def decryptFile(infile, outfile, passw, bufferSize):
 #             long streams
 # inputLength: input stream length
 def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
+    for chunk in decryptStreamGenerator(fIn, passw, bufferSize, inputLength):
+        fOut.write(chunk)
+
+
+# decrypt stream generator function
+# arguments:
+# fIn: input binary stream
+# passw: encryption password
+# bufferSize: decryption buffer size, must be a multiple of AES block size (16)
+#             using a larger buffer speeds up things when dealing with
+#             long streams
+# inputLength: input stream length
+def decryptStreamGenerator(fIn, passw, bufferSize, inputLength):
     # validate bufferSize
     if bufferSize % AESBlockSize != 0:
         raise ValueError("Buffer size must be a multiple of AES block size")
-    
+
     if len(passw) > maxPassLen:
         raise ValueError("Password is too long.")
 
     fdata = fIn.read(3)
     # check if file is in AES Crypt format (also min length check)
     if (fdata != bytes("AES", "utf8") or inputLength < 136):
-            raise ValueError("File is corrupted or not an AES Crypt "
-                             "(or pyAesCrypt) file.")
-        
+        raise ValueError("File is corrupted or not an AES Crypt "
+                         "(or pyAesCrypt) file.")
+
     # check if file is in AES Crypt format, version 2
     # (the only one compatible with pyAesCrypt)
     fdata = fIn.read(1)
     if len(fdata) != 1:
         raise ValueError("File is corrupted.")
-    
+
     if fdata != b"\x02":
         raise ValueError("pyAesCrypt is only compatible with version "
                          "2 of the AES Crypt file format.")
-    
+
     # skip reserved byte
     fIn.read(1)
-    
+
     # skip all the extensions
     while True:
         fdata = fIn.read(2)
@@ -323,62 +336,62 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
         if fdata == b"\x00\x00":
             break
         fIn.read(int.from_bytes(fdata, byteorder="big"))
-        
+
     # read external iv
     iv1 = fIn.read(16)
     if len(iv1) != 16:
         raise ValueError("File is corrupted.")
-    
+
     # stretch password and iv
     key = stretch(passw, iv1)
-    
+
     # read encrypted main iv and key
     c_iv_key = fIn.read(48)
     if len(c_iv_key) != 48:
         raise ValueError("File is corrupted.")
-        
+
     # read HMAC-SHA256 of the encrypted iv and key
     hmac1 = fIn.read(32)
     if len(hmac1) != 32:
         raise ValueError("File is corrupted.")
-    
+
     # compute actual HMAC-SHA256 of the encrypted iv and key
     hmac1Act = hmac.HMAC(key, hashes.SHA256(),
                          backend=default_backend())
     hmac1Act.update(c_iv_key)
-    
+
     # HMAC check
     if hmac1 != hmac1Act.finalize():
         raise ValueError("Wrong password (or file is corrupted).")
-    
+
     # instantiate AES cipher
     cipher1 = Cipher(algorithms.AES(key), modes.CBC(iv1),
                      backend=default_backend())
     decryptor1 = cipher1.decryptor()
-    
+
     # decrypt main iv and key
     iv_key = decryptor1.update(c_iv_key) + decryptor1.finalize()
-    
+
     # get internal iv and key
     iv0 = iv_key[:16]
     intKey = iv_key[16:]
-    
+
     # instantiate another AES cipher
     cipher0 = Cipher(algorithms.AES(intKey), modes.CBC(iv0),
                      backend=default_backend())
     decryptor0 = cipher0.decryptor()
-    
+
     # instantiate actual HMAC-SHA256 of the ciphertext
     hmac0Act = hmac.HMAC(intKey, hashes.SHA256(),
                          backend=default_backend())
-                
+
     while fIn.tell() < inputLength - 32 - 1 - bufferSize:
         # read data
         cText = fIn.read(bufferSize)
         # update HMAC
         hmac0Act.update(cText)
         # decrypt data and write it to output file
-        fOut.write(decryptor0.update(cText))
+        yield decryptor0.update(cText)
 
     # decrypt remaining ciphertext, until last block is reached
     while fIn.tell() < inputLength - 32 - 1 - AESBlockSize:
@@ -387,11 +400,11 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
         # update HMAC
         hmac0Act.update(cText)
         # decrypt data and write it to output file
-        fOut.write(decryptor0.update(cText))
-        
+        yield decryptor0.update(cText)
+
     # last block reached, remove padding if needed
     # read last block
-    
+
     # this is for empty files
     if fIn.tell() != inputLength - 32 - 1:
         cText = fIn.read(AESBlockSize)
@@ -399,31 +412,31 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
             raise ValueError("File is corrupted.")
     else:
         cText = bytes()
-    
+
     # update HMAC
     hmac0Act.update(cText)
-    
+
     # read plaintext file size mod 16 lsb positions
     fs16 = fIn.read(1)
     if len(fs16) != 1:
         raise ValueError("File is corrupted.")
-    
+
     # decrypt last block
     pText = decryptor0.update(cText) + decryptor0.finalize()
-    
+
     # remove padding
     toremove = ((16 - fs16[0]) % 16)
     if toremove != 0:
         pText = pText[:-toremove]
-        
+
     # write decrypted data to output file
-    fOut.write(pText)
-    
+    yield pText
+
     # read HMAC-SHA256 of the encrypted file
     hmac0 = fIn.read(32)
     if len(hmac0) != 32:
         raise ValueError("File is corrupted.")
-    
+
     # HMAC check
     if hmac0 != hmac0Act.finalize():
-        raise ValueError("Bad HMAC (file is corrupted).")   
+        raise ValueError("Bad HMAC (file is corrupted).")
