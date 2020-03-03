@@ -450,7 +450,7 @@ class DecryptingReader:
       self.__buffer_size = bufferSize
       self.__input_length = inputLength
       # TODO: ensure if given a stream that it is binary
-      if hasattr('read', fIn):
+      if hasattr(fIn, 'read'):
           self.__input_stream = fIn
       elif os.path.isfile(fIn):
           self.__input_stream = open(fIn, 'rb')
