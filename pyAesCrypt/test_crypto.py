@@ -25,6 +25,8 @@ from os.path import isfile
 import pyAesCrypt
 
 # test file directory name
+from pyAesCrypt.crypto import DecryptingReader
+
 tfdirname = 'pyAesCryptTF'
 
 # test file path prefix
@@ -195,6 +197,39 @@ class TestBS(unittest.TestCase):
 
         # check that the original file and the output file are equal
         self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
+
+    # test for file-like object
+    def test_fl_quick(self):
+        # encrypt
+        with open(filenames[4], "rb") as fIn:
+            with open(encfilenames[4], "wb") as fOut:
+                pyAesCrypt.encryptStream(fIn, fOut, password, bufferSize)
+
+        # decrypt
+        # with open(encfilenames[4], "rb") as fIn:
+        with DecryptingReader(encfilenames[4], password) as fIn:
+            with open(decfilenames[4], "wb") as fOut:
+                for chunk in iter(lambda: fIn.read(10), b''):
+                    fOut.write(chunk)
+        # check that the original file and the output file are equal
+        self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
+
+        fIn = DecryptingReader(encfilenames[4], password)
+        with open(decfilenames[4], "wb") as fOut:
+            fOut.write(fIn.read())
+        # check that the original file and the output file are equal
+        self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
+
+        # Test seek to mid-file
+        fIn = DecryptingReader(encfilenames[4], password)
+        fIn.seek(10)
+        with open(decfilenames[4], "wb") as fOut:
+            fOut.write(fIn.read())
+
+        with open(filenames[4], 'rb') as fExpected:
+            fExpected.seek(10)
+            expected = fExpected.read()
+        self.assertEqual(expected, open(decfilenames[4], 'rb').read())
 
 
 # test exceptions

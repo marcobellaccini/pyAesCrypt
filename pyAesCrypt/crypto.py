@@ -35,6 +35,8 @@
 #==============================================================================
 
 # pyAesCrypt module
+import os
+from io import BufferedIOBase, UnsupportedOperation
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, hmac
@@ -440,3 +442,68 @@ def decryptStreamGenerator(fIn, passw, bufferSize, inputLength):
     # HMAC check
     if hmac0 != hmac0Act.finalize():
         raise ValueError("Bad HMAC (file is corrupted).")
+
+
+class DecryptingReader:
+  def __init__(self, fIn, passw, bufferSize=64 * 1024, inputLength=None):
+      self.__should_close_input_stream = False
+      self.__buffer_size = bufferSize
+      self.__input_length = inputLength
+      # TODO: ensure if given a stream that it is binary
+      if hasattr('read', fIn):
+          self.__input_stream = fIn
+      elif os.path.isfile(fIn):
+          self.__input_stream = open(fIn, 'rb')
+          self.__input_length = stat(fIn).st_size
+          self.__should_close_input_stream = True
+
+      if self.__input_length is None:
+          raise UnsupportedOperation('must provide a path to a file or provide inputLength')
+
+      self.__reader = decryptStreamGenerator(self.__input_stream, passw, self.__buffer_size, self.__input_length)
+      self.__offset = 0
+      self.__is_open = True
+      self.__buffer = b''
+
+  def read(self, size=None):
+      while size is None or len(self.__buffer) < size:
+          try:
+              self.__buffer += next(self.__reader)
+          except StopIteration:
+              break
+      if size is None:
+          size = len(self.__buffer)
+      ret = self.__buffer[:size]
+      self.__buffer = self.__buffer[size:]
+      self.__offset += len(ret)
+      return ret
+
+  def tell(self):
+      return self.__offset
+
+  def seek(self, offset, whence=0):
+      if whence == 0: # SEEK_SET
+          if offset < self.__offset:
+              raise UnsupportedOperation('Cannot seek backward, only forward.')
+          while offset > self.__offset:
+              remaining = offset - self.__offset
+              self.read(self.__buffer_size if remaining > self.__buffer_size else remaining)
+      elif whence == 1: # SEEK_CUR
+          self.seek(self.__offset + offset, 0)
+      elif whence == 2: # SEEK_END
+          if self.__input_length is None:
+              raise UnsupportedOperation('Can only seek from end if provided an inputLength or given a file path')
+          self.seek(self.__input_length + offset, 0)
+
+      return self.__offset
+
+  def close(self):
+      self.is_open = False
+      if self.__should_close_input_stream:
+          self.__input_stream.close()
+
+  def __enter__(self):
+      return self
+
+  def __exit__(self, exc_type, exc_val, exc_tb):
+      self.close()
