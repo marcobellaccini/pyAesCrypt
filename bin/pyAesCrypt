@@ -40,6 +40,7 @@ import getpass
 from sys import exit
 from os.path import isfile
 import pyAesCrypt
+import os
 
 maxPassLen = 1024  # maximum password length (number of chars)
 
@@ -64,6 +65,14 @@ groupED.add_argument("-d", "--decrypt",
                      help="decrypt file", action="store_true")
 args = parser.parse_args()
 
+# overwrite file with random data to securely wipe it
+def secure_wipe(path, passes=1):
+    with open(path, "ba+") as delfile:
+        length = delfile.tell()
+        for i in range(passes):
+            delfile.seek(0)
+            delfile.write(os.urandom(length))
+    os.remove(path)
 
 # check for input file existence
 if not isfile(args.filename):
@@ -75,7 +84,7 @@ if not args.password:
     passw = str(getpass.getpass("Password:"))
 else:
     # warn the user
-    print("Warning: passing passwords as plaintext "
+    print("\nWarning: passing passwords as plaintext "
           "command-line arguments may be unsafe.")
     # get the password from the argument
     passw = args.password
@@ -96,7 +105,7 @@ if args.encrypt:
             and any(c.isupper() for c in passw)
             and any(c.isdigit() for c in passw)
             and any(not(c.isalnum()) for c in passw)):
-            print("Warning: your password seems weak.")
+            print("\nWarning: your password seems weak.")
             print("A password should be at least 8 chars long and should "
                   "contain at least one lowercase char, one uppercase char, "
                   "one digit and one symbol.")
@@ -107,16 +116,23 @@ if args.encrypt:
         passwConf = str(getpass.getpass("Confirm password:"))
         # check the second pass against the first
         if passw != passwConf:
-            exit("Error: passwords you provided do not match")
+            exit("\nError: passwords you provided do not match")
 
     # open output file
     if args.out is not None:
         ofname = args.out
     else:
         ofname = args.filename+".aes"
-
-    # call encryption function
+    # make sure filename doesn't already exist
+    # and call encryption function
     try:
+        check_file = open(args.filename+".aes", "r")
+        if args.out is None:
+            print("\nError: This action would overwrite a file that already exists.\n")
+            exit()
+        else:
+            pyAesCrypt.encryptFile(args.filename, ofname, passw, bufferSize)
+    except FileNotFoundError:
         pyAesCrypt.encryptFile(args.filename, ofname, passw, bufferSize)
     # handle IO errors
     except IOError as ex:
@@ -124,6 +140,17 @@ if args.encrypt:
     # handle value errors
     except ValueError as ex:
         exit(ex)
+    while True:
+        selectDel = input('\nDo you want to securely erase the original unencrypted file?   ')
+        if selectDel in ('no', 'n', 'No', 'N'):
+            print ("\n Complete.\n")
+            break 
+        if selectDel in ('yes', 'y', 'Yes', 'Y'):
+            print ("\n Complete.\n")
+            secure_wipe(args.filename)
+            break
+        else:
+            print ("\n That is not a valid option.\n")
 
 elif args.decrypt:
     # open output file
@@ -135,8 +162,15 @@ elif args.decrypt:
         exit("Error: if input file extension is not \".aes\", you should "
              "provide the output file name through \"-o\" option.")
 
-    # call decryption function
+    # call decryption function      
     try:
+        check_file = open(args.filename[:-4], 'r')
+        if args.out is None:
+            print("\nError: This action would overwrite a file that already exists.\n")
+            exit()
+        else:
+            pyAesCrypt.encryptFile(args.filename, ofname, passw, bufferSize)
+    except FileNotFoundError:
         pyAesCrypt.decryptFile(args.filename, ofname, passw, bufferSize)
     # handle IO errors
     except IOError as ex:
@@ -144,3 +178,14 @@ elif args.decrypt:
     # handle value errors
     except ValueError as ex:
         exit(ex)
+    while True:
+        selectDel = input('\nDo you want to securely erase the original encrypted file?  ')
+        if selectDel in ('no', 'n', 'No', 'N'):
+            print ("\n Complete.\n")
+            break 
+        if selectDel in ('yes', 'y', 'Yes', 'Y'):
+            print ("\n Complete.\n")
+            secure_wipe(args.filename)
+            break
+        else:
+            print ("\n That is not a valid option.\n")
