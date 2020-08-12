@@ -13,7 +13,7 @@ pyAesCrypt is compatible with the `AES Crypt`_ `file format`_ (version 2).
 
 It is Free Software, released under the `Apache License, Version 2.0`_.
 
-pyAesCrypt is brought to you by Marco Bellaccini - marco.bellaccini(at!)gmail.com.
+pyAesCrypt is brought to you by Marco Bellaccini - marco.bellaccini@gmail.com.
  
 IMPORTANT SECURITY NOTE: version 2 of the AES Crypt file format does not authenticate the "file size modulo 16" byte. This implies that an attacker  
 with write access to the encrypted file may alter the corresponding plaintext file size by up to 15 bytes.
