@@ -372,6 +372,7 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
     hmac0Act = hmac.HMAC(intKey, hashes.SHA256(),
                          backend=default_backend())
                 
+    # decrypt remaining ciphertext, until last block is reached
     while fIn.tell() < inputLength - 32 - 1 - AESBlockSize:
         # read data
         cText = fIn.read(
@@ -383,7 +384,7 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
         # update HMAC
         hmac0Act.update(cText)
         # decrypt data and write it to output file
-        fOut.write(decryptor0.update(cText))
+        yield decryptor0.update(cText)
         
     # last block reached, remove padding if needed
     # read last block
