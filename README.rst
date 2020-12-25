@@ -1,7 +1,9 @@
 pyAesCrypt
 ===============
-.. image:: https://travis-ci.org/Dead4W/pyAesCrypt.svg?branch=master
-    :target: https://travis-ci.org/Dead4W/pyAesCrypt
+.. image:: https://travis-ci.org/marcobellaccini/pyAesCrypt.svg?branch=master
+    :target: https://travis-ci.org/marcobellaccini/pyAesCrypt
+.. image:: https://pepy.tech/badge/pyaescrypt
+    :target: https://pepy.tech/project/pyaescrypt
 
 About pyAesCrypt
 --------------------------
