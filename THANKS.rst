@@ -1,6 +1,6 @@
 Thanks
 ===============
-* Thanks to `Ben Fisher`_ for providing a patch to improve decryption speed.
+* Thanks to `Ben Fisher`_ and `Dead4W`_ for providing patches to improve decryption speed.
 
 * Thanks to `Thomas O'Neill`_ for suggesting and implementing the password option in the script.
 
@@ -15,3 +15,5 @@ Thanks
 .. _Harish Navnit: https://github.com/harishnavnit
 
 .. _sander76: https://github.com/sander76
+
+.. _Dead4W: https://github.com/Dead4W
