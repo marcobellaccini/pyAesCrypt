@@ -307,22 +307,24 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
     fdata = fIn.read(1)
     if len(fdata) != 1:
         raise ValueError("File is corrupted.")
-    
-    if fdata != b"\x02":
+
+    if fdata != b"\x02" and fdata != b"\x01":
         raise ValueError("pyAesCrypt is only compatible with version "
-                         "2 of the AES Crypt file format.")
-    
+                         "1 and 2 of the AES Crypt file format.")
+
     # skip reserved byte
     fIn.read(1)
-    
-    # skip all the extensions
-    while True:
-        fdata = fIn.read(2)
-        if len(fdata) != 2:
-            raise ValueError("File is corrupted.")
-        if fdata == b"\x00\x00":
-            break
-        fIn.read(int.from_bytes(fdata, byteorder="big"))
+
+    # extensions only in v2 file format
+    if fdata == b"\x02":
+        # skip all the extensions
+        while True:
+            fdata = fIn.read(2)
+            if len(fdata) != 2:
+                raise ValueError("File is corrupted.")
+            if fdata == b"\x00\x00":
+                break
+            fIn.read(int.from_bytes(fdata, byteorder="big"))
         
     # read external iv
     iv1 = fIn.read(16)
