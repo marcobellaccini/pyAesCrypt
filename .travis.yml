@@ -42,7 +42,7 @@ jobs:
       language: shell       # 'language: python' is an error on Travis CI Windows
       before_install:
         - choco install python --version 3.9.1
-        - python -m pip install --upgrade pip
+        - pip install --upgrade pip
         - wget https://www.aescrypt.com/download/v3/windows/AESCrypt_console_v310_x64.zip
         - unzip AESCrypt_console_v310_x64.zip
         - cp AESCrypt_console_v310_x64/aescrypt.exe ./
