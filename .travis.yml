@@ -1,15 +1,69 @@
 language: python
-python:
-  - "3.6"
-  - "3.7"
-  - "3.8"
-  - "3.9"
+cache: pip
+jobs:
+  include:
+    - name: "Python 3.4 on Xenial Linux"
+      python: 3.4
+      # install compatibility test dependencies (AES Crypt)
+      before_install:
+        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
+        - tar -xzf aescrypt-3.14.tgz 
+        - pushd aescrypt-3.14/src && make && sudo make install && popd
+    - name: "Python 3.5 on Xenial Linux"
+      python: 3.5
+      before_install:
+        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
+        - tar -xzf aescrypt-3.14.tgz 
+        - pushd aescrypt-3.14/src && make && sudo make install && popd
+    - name: "Python 3.6 on Xenial Linux"
+      python: 3.6
+      before_install:
+        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
+        - tar -xzf aescrypt-3.14.tgz 
+        - pushd aescrypt-3.14/src && make && sudo make install && popd
+    - name: "Python 3.7 on Xenial Linux"
+      python: 3.7
+      before_install:
+        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
+        - tar -xzf aescrypt-3.14.tgz 
+        - pushd aescrypt-3.14/src && make && sudo make install && popd
+    - name: "Python 3.8 on Xenial Linux"
+      python: 3.8
+      before_install:
+        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
+        - tar -xzf aescrypt-3.14.tgz 
+        - pushd aescrypt-3.14/src && make && sudo make install && popd
+    - name: "Python 3.9 on Xenial Linux"
+      python: 3.9
+      before_install:
+        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
+        - tar -xzf aescrypt-3.14.tgz 
+        - pushd aescrypt-3.14/src && make && sudo make install && popd
+    - name: "Python 3 on macOS"
+      os: osx
+      osx_image: xcode11.2
+      language: shell       # 'language: python' is an error on Travis CI macOS
+      before_install:
+        - wget https://www.aescrypt.com/download/v3/mac/aescrypt_mac_v314_x64.zip
+        - tar -xzf aescrypt_mac_v314_x64.zip
+        # add aesacrypt alias
+        - sudo cp usr/local/bin/aescrypt /usr/local/bin/
+        # add python3 and pip3 as default
+        - sudo cp /usr/local/bin/python3 /usr/local/bin/python
+        - sudo cp /usr/local/bin/pip3 /usr/local/bin/pip
+    - name: "Python 3.8.0 on Windows"
+      os: windows           # Windows 10 latest build
+      language: shell       # 'language: python' is an error on Travis CI Windows
+      before_install:
+        - choco install python --version 3.8.0
+        - python -m pip install --upgrade pip
+        - wget https://www.aescrypt.com/download/v3/windows/AESCrypt_console_v310_x64.zip
+        - unzip AESCrypt_console_v310_x64.zip
+        - cp AESCrypt_console_v310_x64/aescrypt.exe ./
+      env: PATH=/c/Python38:/c/Python38/Scripts:$PATH
 # command to install program dependencies (PyCA cryptography) and compatibility test dependencies (AES Crypt)
 install:
   - pip install cryptography
-  - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
-  - tar -xzf aescrypt-3.14.tgz
-  - pushd aescrypt-3.14/src && make && sudo make install && popd
 
 # command to run tests
 script: python -m unittest discover
