@@ -8,6 +8,8 @@ Thanks
 
 * Thanks to `sander76`_ for finding an issue affecting output file removal.
 
+* Thanks to `Dead4W`_ for improving CI.
+
 .. _Ben Fisher: https://downpoured.github.io/
 
 .. _Thomas O'Neill: https://github.com/toneill818
