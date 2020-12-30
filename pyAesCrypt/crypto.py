@@ -304,19 +304,23 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
         
     # check if file is in AES Crypt format, version 2
     # (the only one compatible with pyAesCrypt)
-    fdata = fIn.read(1)
-    if len(fdata) != 1:
+    version = fIn.read(1)
+    if len(version) != 1:
         raise ValueError("File is corrupted.")
 
-    if fdata != b"\x02" and fdata != b"\x01":
+    if version != b"\x02" and version != b"\x01" and version != b"\x00":
         raise ValueError("pyAesCrypt is only compatible with version "
-                         "1 and 2 of the AES Crypt file format.")
+                         "0,1,2 of the AES Crypt file format.")
 
-    # skip reserved byte
-    fIn.read(1)
+    if version == b"\x00":
+        # read plaintext file size mod 16 lsb positions
+        fs16 = fIn.read(1)
+    else:
+        # skip reserved byte
+        fIn.read(1)
 
     # extensions only in v2 file format
-    if fdata == b"\x02":
+    if version == b"\x02":
         # skip all the extensions
         while True:
             fdata = fIn.read(2)
@@ -325,7 +329,7 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
             if fdata == b"\x00\x00":
                 break
             fIn.read(int.from_bytes(fdata, byteorder="big"))
-        
+
     # read external iv
     iv1 = fIn.read(16)
     if len(iv1) != 16:
@@ -333,54 +337,71 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
     
     # stretch password and iv
     key = stretch(passw, iv1)
-    
-    # read encrypted main iv and key
-    c_iv_key = fIn.read(48)
-    if len(c_iv_key) != 48:
-        raise ValueError("File is corrupted.")
+
+    if version == b"\x00":
+        # compute actual HMAC-SHA256 of the encrypted iv and key
+        hmac0Act = hmac.HMAC(key, hashes.SHA256(),
+                             backend=default_backend())
+
+        # instantiate AES cipher
+        cipher0 = Cipher(algorithms.AES(key), modes.CBC(iv1),
+                         backend=default_backend())
+        decryptor0 = cipher0.decryptor()
+
+    if version == b"\x01" or version == b"\x02":
+        # compute actual HMAC-SHA256 of the encrypted iv and key
+        hmac1Act = hmac.HMAC(key, hashes.SHA256(),
+                             backend=default_backend())
+
+        # instantiate AES cipher
+        cipher1 = Cipher(algorithms.AES(key), modes.CBC(iv1),
+                         backend=default_backend())
+        decryptor1 = cipher1.decryptor()
+
+        # read encrypted main iv and key
+        c_iv_key = fIn.read(48)
+        if len(c_iv_key) != 48:
+            raise ValueError("File is corrupted.")
         
-    # read HMAC-SHA256 of the encrypted iv and key
-    hmac1 = fIn.read(32)
-    if len(hmac1) != 32:
-        raise ValueError("File is corrupted.")
+        # read HMAC-SHA256 of the encrypted iv and key
+        hmac1 = fIn.read(32)
+        if len(hmac1) != 32:
+            raise ValueError("File is corrupted.")
+
+        hmac1Act.update(c_iv_key)
+
+        # HMAC check
+        if hmac1 != hmac1Act.finalize():
+            raise ValueError("Wrong password (or file is corrupted).")
+
+        # decrypt main iv and key
+        iv_key = decryptor1.update(c_iv_key) + decryptor1.finalize()
     
-    # compute actual HMAC-SHA256 of the encrypted iv and key
-    hmac1Act = hmac.HMAC(key, hashes.SHA256(),
+        # get internal iv and key
+        iv0 = iv_key[:16]
+        intKey = iv_key[16:]
+    
+        # instantiate another AES cipher
+        cipher0 = Cipher(algorithms.AES(intKey), modes.CBC(iv0),
                          backend=default_backend())
-    hmac1Act.update(c_iv_key)
+        decryptor0 = cipher0.decryptor()
     
-    # HMAC check
-    if hmac1 != hmac1Act.finalize():
-        raise ValueError("Wrong password (or file is corrupted).")
-    
-    # instantiate AES cipher
-    cipher1 = Cipher(algorithms.AES(key), modes.CBC(iv1),
-                     backend=default_backend())
-    decryptor1 = cipher1.decryptor()
-    
-    # decrypt main iv and key
-    iv_key = decryptor1.update(c_iv_key) + decryptor1.finalize()
-    
-    # get internal iv and key
-    iv0 = iv_key[:16]
-    intKey = iv_key[16:]
-    
-    # instantiate another AES cipher
-    cipher0 = Cipher(algorithms.AES(intKey), modes.CBC(iv0),
-                     backend=default_backend())
-    decryptor0 = cipher0.decryptor()
-    
-    # instantiate actual HMAC-SHA256 of the ciphertext
-    hmac0Act = hmac.HMAC(intKey, hashes.SHA256(),
-                         backend=default_backend())
+        # instantiate actual HMAC-SHA256 of the ciphertext
+        hmac0Act = hmac.HMAC(intKey, hashes.SHA256(),
+                             backend=default_backend())
+
+    if version == b"\x00":
+        endLastBlock = 32
+    else:
+        endLastBlock = 32 + 1
 
     # decrypt ciphertext, until last block is reached
-    while fIn.tell() < inputLength - 32 - 1 - AESBlockSize:
+    while fIn.tell() < inputLength - endLastBlock - AESBlockSize:
         # read data
         cText = fIn.read(
             min(
                 bufferSize,
-                inputLength - fIn.tell() - 32 - 1 - AESBlockSize
+                inputLength - fIn.tell() - endLastBlock - AESBlockSize
             )
         )
         # update HMAC
@@ -393,21 +414,23 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
     # read last block
     
     # this is for empty files
-    if fIn.tell() != inputLength - 32 - 1:
+    if fIn.tell() != inputLength - endLastBlock:
         cText = fIn.read(AESBlockSize)
         if len(cText) < AESBlockSize:
             raise ValueError("File is corrupted.")
     else:
         cText = bytes()
-    
+
     # update HMAC
     hmac0Act.update(cText)
-    
-    # read plaintext file size mod 16 lsb positions
-    fs16 = fIn.read(1)
+
+    if version != b"\x00":
+        # read plaintext file size mod 16 lsb positions
+        fs16 = fIn.read(1)
+
     if len(fs16) != 1:
         raise ValueError("File is corrupted.")
-    
+
     # decrypt last block
     pText = decryptor0.update(cText) + decryptor0.finalize()
     
@@ -423,7 +446,7 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
     hmac0 = fIn.read(32)
     if len(hmac0) != 32:
         raise ValueError("File is corrupted.")
-    
+
     # HMAC check
     if hmac0 != hmac0Act.finalize():
         raise ValueError("Bad HMAC (file is corrupted).")   

@@ -273,7 +273,7 @@ class TestExceptions(unittest.TestCase):
         # try to decrypt file
         # ...and check that ValueError is raised
         self.assertRaisesRegex(ValueError, ("pyAesCrypt is only "
-                                                "compatible with version 1 and 2 of "
+                                                "compatible with version 0,1,2 of "
                                                 "the AES Crypt file format."),
                                pyAesCrypt.decryptFile, self.tfile + '.aes',
                                self.tfile + '.decr', password, bufferSize)
