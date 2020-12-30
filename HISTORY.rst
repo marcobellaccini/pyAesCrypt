@@ -1,6 +1,11 @@
 History
 ===============
 
+0.4.4 (Dec 2020)
+~~~~~~~~~~~~~~~~~~
+* Improved decryption speed
+* Cross-platform CI
+
 0.4.3 (Apr 2019)
 ~~~~~~~~~~~~~~~~~~
 * Fixed bug when deleting bad output file (this was unnoticeable when running on GNU/Linux)
