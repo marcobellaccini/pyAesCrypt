@@ -34,14 +34,14 @@ jobs:
         - wget https://www.aescrypt.com/download/v3/mac/aescrypt_mac_v314_x64.zip
         - tar -xzf aescrypt_mac_v314_x64.zip
         - sudo cp usr/local/bin/aescrypt /usr/local/bin
-        # python->python3 symlinks
-        - sudo ln -s /usr/local/bin/python3 /usr/local/bin/python
-        - sudo ln -s /usr/local/bin/pip3 /usr/local/bin/pip
-    - name: "Python 3.9.1 on Windows"
+        # dirty trick to force python3
+        - sudo cp /usr/local/bin/python3 /usr/local/bin/python
+        - sudo cp /usr/local/bin/pip3 /usr/local/bin/pip
+    - name: "Python 3.8.0 on Windows"
       os: windows           # maps to Windows Server version 1809 - at least in Dec 2020
       language: shell       # 'language: python' is an error on Travis CI Windows
       before_install:
-        - choco install python --version 3.9.1
+        - choco install python --version 3.8.0
         - python -m pip install --upgrade pip
         - wget https://www.aescrypt.com/download/v3/windows/AESCrypt_console_v310_x64.zip
         - unzip AESCrypt_console_v310_x64.zip
