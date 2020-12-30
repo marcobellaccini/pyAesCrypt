@@ -2,60 +2,46 @@ language: python
 cache: pip
 jobs:
   include:
-    - name: "Python 3.4 on Xenial Linux"
-      python: 3.4
-      # install compatibility test dependencies (AES Crypt)
-      before_install:
-        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
-        - tar -xzf aescrypt-3.14.tgz 
-        - pushd aescrypt-3.14/src && make && sudo make install && popd
-    - name: "Python 3.5 on Xenial Linux"
-      python: 3.5
-      before_install:
-        - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
-        - tar -xzf aescrypt-3.14.tgz 
-        - pushd aescrypt-3.14/src && make && sudo make install && popd
-    - name: "Python 3.6 on Xenial Linux"
+    - name: "Python 3.6 on Ubuntu Xenial"
       python: 3.6
       before_install:
         - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
         - tar -xzf aescrypt-3.14.tgz 
         - pushd aescrypt-3.14/src && make && sudo make install && popd
-    - name: "Python 3.7 on Xenial Linux"
+    - name: "Python 3.7 on Ubuntu Xenial"
       python: 3.7
       before_install:
         - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
         - tar -xzf aescrypt-3.14.tgz 
         - pushd aescrypt-3.14/src && make && sudo make install && popd
-    - name: "Python 3.8 on Xenial Linux"
+    - name: "Python 3.8 on Ubuntu Xenial"
       python: 3.8
       before_install:
         - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
         - tar -xzf aescrypt-3.14.tgz 
         - pushd aescrypt-3.14/src && make && sudo make install && popd
-    - name: "Python 3.9 on Xenial Linux"
+    - name: "Python 3.9 on Ubuntu Xenial"
       python: 3.9
       before_install:
         - wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
         - tar -xzf aescrypt-3.14.tgz 
         - pushd aescrypt-3.14/src && make && sudo make install && popd
-    - name: "Python 3 on macOS"
+    - name: "Python 3 on macOS 10.15.7"
       os: osx
-      osx_image: xcode11.2
+      osx_image: xcode12.2
       language: shell       # 'language: python' is an error on Travis CI macOS
       before_install:
         - wget https://www.aescrypt.com/download/v3/mac/aescrypt_mac_v314_x64.zip
         - tar -xzf aescrypt_mac_v314_x64.zip
-        # add aesacrypt alias
-        - sudo cp usr/local/bin/aescrypt /usr/local/bin/
-        # add python3 and pip3 as default
-        - sudo cp /usr/local/bin/python3 /usr/local/bin/python
-        - sudo cp /usr/local/bin/pip3 /usr/local/bin/pip
-    - name: "Python 3.8.0 on Windows"
-      os: windows           # Windows 10 latest build
+        - sudo cp usr/local/bin/aescrypt /usr/local/bin
+        # python->python3 symlinks
+        - sudo ln -s /usr/local/bin/python3 /usr/local/bin/python
+        - sudo ln -s /usr/local/bin/pip3 /usr/local/bin/pip
+    - name: "Python 3.9.1 on Windows"
+      os: windows           # maps to Windows Server version 1809 - at least in Dec 2020
       language: shell       # 'language: python' is an error on Travis CI Windows
       before_install:
-        - choco install python --version 3.8.0
+        - choco install python --version 3.9.1
         - python -m pip install --upgrade pip
         - wget https://www.aescrypt.com/download/v3/windows/AESCrypt_console_v310_x64.zip
         - unzip AESCrypt_console_v310_x64.zip
