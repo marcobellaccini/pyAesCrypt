@@ -3,7 +3,7 @@ History
 
 5.0.0 (Gen 2021)
 ~~~~~~~~~~~~~~~~~~
-* Fixed misleading messages when IOErrors occurs (some public API exceptions where changed)
+* Fixed misleading messages when IOErrors occur (some public API exceptions where changed)
 * Switched to Semantic Versioning
 
 0.4.4 (Dec 2020)
