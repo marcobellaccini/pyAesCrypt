@@ -86,20 +86,20 @@ if args.encrypt:
         exit("Error: password is too long")
 
     # Check password complexity
-    # here assume that a good password is at least 8 chars long
+    # here assume that a good password is at least 12 chars long
     # and includes at least:
     # 1 lowercase char
     # 1 uppercase char
     # 1 digit
     # 1 symbol
-    if not((len(passw) > 7) and any(c.islower() for c in passw)
+    if not((len(passw) > 11) and any(c.islower() for c in passw)
             and any(c.isupper() for c in passw)
             and any(c.isdigit() for c in passw)
             and any(not(c.isalnum()) for c in passw)):
             print("Warning: your password seems weak.")
-            print("A password should be at least 8 chars long and should "
-                  "contain at least one lowercase char, one uppercase char, "
-                  "one digit and one symbol.")
+            print("A password should be at least 12 chars and should "
+                  "contain lowercase chars, uppercase chars, "
+                  "digits and symbols.")
 
     # re-prompt the user for password
     # if it was not supplied from the command line
