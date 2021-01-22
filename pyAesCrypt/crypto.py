@@ -42,8 +42,8 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from os import urandom
 from os import stat, remove, path
 
-# pyAesCrypt version
-version = "0.4.4"
+# pyAesCrypt version - now semver
+version = "5.0.0"
 
 # encryption/decryption buffer size - 64K
 bufferSize = 64 * 1024
@@ -94,10 +94,10 @@ def encryptFile(infile, outfile, passw, bufferSize):
                     encryptStream(fIn, fOut, passw, bufferSize)
                 
             except IOError:
-                raise IOError("Unable to write output file.")
+                raise ValueError("Unable to write output file.")
             
     except IOError:
-        raise IOError("File \"" + infile + "\" was not found.")
+        raise ValueError("Unable to read input file.")
                 
 
 # encrypt binary stream function
@@ -268,7 +268,7 @@ def decryptFile(infile, outfile, passw, bufferSize):
                         raise ValueError(str(exd))
             
             except IOError:
-                raise IOError("Unable to write output file.")
+                raise ValueError("Unable to write output file.")
             except ValueError as exd:
                 # remove output file on error
                 remove(outfile)
@@ -276,7 +276,7 @@ def decryptFile(infile, outfile, passw, bufferSize):
                 raise ValueError(str(exd))
                 
     except IOError:
-        raise IOError("File \"" + infile + "\" was not found.")
+        raise ValueError("Unable to read input file.")
                     
 
 # decrypt stream function
