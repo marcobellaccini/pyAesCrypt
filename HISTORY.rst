@@ -1,5 +1,9 @@
 History
-===============
+==================
+
+Next release
+~~~~~~~~~~~~~~~~~~
+* Updated password complexity check 
 
 5.0.0 (Gen 2021)
 ~~~~~~~~~~~~~~~~~~
