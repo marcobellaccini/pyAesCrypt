@@ -39,6 +39,7 @@ import argparse
 import getpass
 from sys import exit
 from os.path import isfile
+from os import remove
 import pyAesCrypt
 
 maxPassLen = 1024  # maximum password length (number of chars)
@@ -118,6 +119,15 @@ if args.encrypt:
     # call encryption function
     try:
         pyAesCrypt.encryptFile(args.filename, ofname, passw, bufferSize)
+        # exitCode = sys.exit(0)
+        deletePlain=input('Remove plaintext input {}? [y|N]'.format(args.filename)) or 'N'
+        if deletePlain == 'y':
+            try:
+                remove(args.filename)
+            except:
+                raise
+        else:
+            print('[INFO] Plaintext file {} remains on disk.'.format(args.filename))
     # handle IO errors
     except IOError as ex:
         exit(ex)
@@ -131,6 +141,8 @@ elif args.decrypt:
         ofname = args.out
     elif args.filename.endswith(".aes"):
         ofname = args.filename[:-4]
+        with open(ofname, 'r') as decrypted:
+            print(decrypted.read())
     else:
         exit("Error: if input file extension is not \".aes\", you should "
              "provide the output file name through \"-o\" option.")
