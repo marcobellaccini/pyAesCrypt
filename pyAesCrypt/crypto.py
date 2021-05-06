@@ -109,7 +109,8 @@ def encryptFile(infile, outfile, passw, bufferSize):
 #             AES block size (16)
 #             using a larger buffer speeds up things when dealing
 #             with long streams
-def encryptStream(fIn, fOut, passw, bufferSize):
+#             default 64 * 1024
+def encryptStream(fIn, fOut, passw, bufferSize = bufferSize):
     # validate bufferSize
     if bufferSize % AESBlockSize != 0:
         raise ValueError("Buffer size must be a multiple of AES block size.")
@@ -244,7 +245,8 @@ def encryptStream(fIn, fOut, passw, bufferSize):
 # bufferSize: decryption buffer size, must be a multiple of AES block size (16)
 #             using a larger buffer speeds up things when dealing with
 #             big files
-def decryptFile(infile, outfile, passw, bufferSize):
+#             default 64 * 1024
+def decryptFile(infile, outfile, passw, bufferSize = bufferSize):
     try:
         with open(infile, "rb") as fIn:
             # check that output file does not exist
@@ -287,8 +289,9 @@ def decryptFile(infile, outfile, passw, bufferSize):
 # bufferSize: decryption buffer size, must be a multiple of AES block size (16)
 #             using a larger buffer speeds up things when dealing with
 #             long streams
+#             default 64 * 1024
 # inputLength: input stream length
-def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
+def decryptStream(fIn, fOut, passw, bufferSize = bufferSize, inputLength):
     # validate bufferSize
     if bufferSize % AESBlockSize != 0:
         raise ValueError("Buffer size must be a multiple of AES block size")
