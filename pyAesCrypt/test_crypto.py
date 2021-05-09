@@ -131,6 +131,16 @@ class TestEncDec(unittest.TestCase):
             pyAesCrypt.decryptFile(ct, ou, password, bufferSize)
             # check that the original file and the output file are equal
             self.assertTrue(filecmp.cmp(pt, ou))
+
+    # test pyAesCrypt encryption/decryption with default buffer size
+    def test_enc_pyAesCrypt_dec_pyAesCrypt_defbufsize(self):
+        for pt, ct, ou in zip(filenames, encfilenames, decfilenames):
+            # encrypt file
+            pyAesCrypt.encryptFile(pt, ct, password)
+            # decrypt file
+            pyAesCrypt.decryptFile(ct, ou, password)
+            # check that the original file and the output file are equal
+            self.assertTrue(filecmp.cmp(pt, ou))
             
     # test encryption with pyAesCrypt and decryption with AES Crypt
     def test_enc_pyAesCrypt_dec_AesCrypt(self):

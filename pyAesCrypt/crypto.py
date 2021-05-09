@@ -43,10 +43,10 @@ from os import urandom
 from os import stat, remove, path
 
 # pyAesCrypt version - now semver
-version = "5.0.0"
+version = "6.0.0"
 
-# encryption/decryption buffer size - 64K
-bufferSize = 64 * 1024
+# default encryption/decryption buffer size - 64KB
+bufferSizeDef = 64 * 1024
 
 # maximum password length (number of chars)
 maxPassLen = 1024
@@ -74,11 +74,12 @@ def stretch(passw, iv1):
 # infile: plaintext file path
 # outfile: ciphertext file path
 # passw: encryption password
-# bufferSize: encryption buffer size, must be a multiple of
+# bufferSize: optional buffer size, must be a multiple of
 #             AES block size (16)
 #             using a larger buffer speeds up things when dealing
 #             with big files
-def encryptFile(infile, outfile, passw, bufferSize):
+#             Default is 64KB.
+def encryptFile(infile, outfile, passw, bufferSize = bufferSizeDef):
     try:
         with open(infile, "rb") as fIn:
             # check that output file does not exist
@@ -241,10 +242,11 @@ def encryptStream(fIn, fOut, passw, bufferSize):
 # infile: ciphertext file path
 # outfile: plaintext file path
 # passw: encryption password
-# bufferSize: decryption buffer size, must be a multiple of AES block size (16)
+# bufferSize: optional buffer size, must be a multiple of AES block size (16)
 #             using a larger buffer speeds up things when dealing with
 #             big files
-def decryptFile(infile, outfile, passw, bufferSize):
+#             Default is 64KB.
+def decryptFile(infile, outfile, passw, bufferSize = bufferSizeDef):
     try:
         with open(infile, "rb") as fIn:
             # check that output file does not exist

@@ -10,6 +10,8 @@ Thanks
 
 * Thanks to `Dead4W`_ for improving CI.
 
+* Thanks to `MySixSenses`_ for pointing out that there was no default buffer size.
+
 .. _Ben Fisher: https://downpoured.github.io/
 
 .. _Thomas O'Neill: https://github.com/toneill818
@@ -19,3 +21,5 @@ Thanks
 .. _sander76: https://github.com/sander76
 
 .. _Dead4W: https://github.com/Dead4W
+
+.. _MySixSenses: https://github.com/MySixSenses

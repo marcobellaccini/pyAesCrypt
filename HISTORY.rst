@@ -1,9 +1,10 @@
 History
 ==================
 
-Next release
+6.0.0 (May 2021)
 ~~~~~~~~~~~~~~~~~~
-* Updated password complexity check 
+* Updated password complexity check
+* Set a default buffer size
 
 5.0.0 (Gen 2021)
 ~~~~~~~~~~~~~~~~~~

@@ -27,15 +27,26 @@ Here is an example showing encryption and decryption of a file:
 .. code:: python
 
     import pyAesCrypt
-    # encryption/decryption buffer size - 64K
-    bufferSize = 64 * 1024
-    password = "foopassword"
+    password = "please-use-a-long-and-random-password"
+    # encrypt
+    pyAesCrypt.encryptFile("data.txt", "data.txt.aes", password)
+    # decrypt
+    pyAesCrypt.decryptFile("data.txt.aes", "dataout.txt", password)
+
+**This is the most straightforward way to use pyAesCrypt, and should be preferred.**
+
+If you need to specify a custom buffer size (default is 64KB), you can pass it as an optional argument:
+
+.. code:: python
+
+    import pyAesCrypt
+    # custom encryption/decryption buffer size (default is 64KB)
+    bufferSize = 128 * 1024
+    password = "please-use-a-long-and-random-password"
     # encrypt
     pyAesCrypt.encryptFile("data.txt", "data.txt.aes", password, bufferSize)
     # decrypt
     pyAesCrypt.decryptFile("data.txt.aes", "dataout.txt", password, bufferSize)
-
-**This is the most straightforward way to use pyAesCrypt, and should be preferred.**
 
 In case you need it, you can work with binary streams too:
 
@@ -44,8 +55,9 @@ In case you need it, you can work with binary streams too:
     import pyAesCrypt
     from os import stat, remove
     # encryption/decryption buffer size - 64K
+    # with stream-oriented functions, setting buffer size is mandatory
     bufferSize = 64 * 1024
-    password = "foopassword"
+    password = "please-use-a-long-and-random-password"
     
     # encrypt
     with open("data.txt", "rb") as fIn:
@@ -73,7 +85,7 @@ you can also perform in-memory encryption/decryption (using BytesIO):
     import io
     
     bufferSize = 64 * 1024
-    password = "foopassword"
+    password = "please-use-a-long-and-random-password"
     
     # binary data to be encrypted
     pbdata = b"This is binary plaintext \x00\x01"
