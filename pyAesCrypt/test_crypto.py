@@ -328,7 +328,8 @@ class TestExceptions(unittest.TestCase):
         
         # try to decrypt file
         # ...and check that ValueError is raised
-        self.assertRaisesRegex(ValueError, "File is corrupted.",
+        self.assertRaisesRegex(ValueError, ("Bad HMAC "
+                                                "\(file is corrupted\)."),
                                pyAesCrypt.decryptFile, self.tfile + '.aes',
                                self.tfile + '.decr', password, bufferSize)
                                

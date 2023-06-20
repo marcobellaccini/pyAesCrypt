@@ -36,14 +36,16 @@
 
 # pyAesCrypt module
 
+import io
+import warnings
+from os import path, remove, urandom
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from os import urandom
-from os import stat, remove, path
 
 # pyAesCrypt version - now semver
-version = "6.0.0"
+version = "6.1.0"
 
 # default encryption/decryption buffer size - 64KB
 bufferSizeDef = 64 * 1024
@@ -88,7 +90,7 @@ def encryptFile(infile, outfile, passw, bufferSize=bufferSizeDef):
             # (i.e.: overwrite if it seems safe)
             if path.isfile(outfile):
                 if path.samefile(infile, outfile):
-                    raise ValueError("Input and output files " "are the same.")
+                    raise ValueError("Input and output files are the same.")
             try:
                 with open(outfile, "wb") as fOut:
                     # encrypt file stream
@@ -110,7 +112,7 @@ def encryptFile(infile, outfile, passw, bufferSize=bufferSizeDef):
 #             AES block size (16)
 #             using a larger buffer speeds up things when dealing
 #             with long streams
-def encryptStream(fIn, fOut, passw, bufferSize):
+def encryptStream(fIn, fOut, passw, bufferSize=bufferSizeDef):
     # validate bufferSize
     if bufferSize % AESBlockSize != 0:
         raise ValueError("Buffer size must be a multiple of AES block size.")
@@ -249,14 +251,12 @@ def decryptFile(infile, outfile, passw, bufferSize=bufferSizeDef):
             # (i.e.: overwrite if it seems safe)
             if path.isfile(outfile):
                 if path.samefile(infile, outfile):
-                    raise ValueError("Input and output files " "are the same.")
+                    raise ValueError("Input and output files are the same.")
             try:
                 with open(outfile, "wb") as fOut:
-                    # get input file size
-                    inputFileSize = stat(infile).st_size
                     try:
                         # decrypt file stream
-                        decryptStream(fIn, fOut, passw, bufferSize, inputFileSize)
+                        decryptStream(fIn, fOut, passw, bufferSize)
                     except ValueError as exd:
                         # should not remove output file here because it is still in use
                         # re-raise exception
@@ -282,8 +282,14 @@ def decryptFile(infile, outfile, passw, bufferSize=bufferSizeDef):
 # bufferSize: decryption buffer size, must be a multiple of AES block size (16)
 #             using a larger buffer speeds up things when dealing with
 #             long streams
-# inputLength: input stream length
-def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
+# inputLength: input stream length (DEPRECATED)
+def decryptStream(fIn, fOut, passw, bufferSize=bufferSizeDef, inputLength=None):
+    if inputLength is not None:
+        warnings.warn(
+            "inputLength parameter is no longer used, and might be removed in a future version",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     # validate bufferSize
     if bufferSize % AESBlockSize != 0:
         raise ValueError("Buffer size must be a multiple of AES block size")
@@ -291,12 +297,13 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
     if len(passw) > maxPassLen:
         raise ValueError("Password is too long.")
 
+    if not hasattr(fIn, "peek"):
+        fIn = io.BufferedReader(fIn, bufferSize)
+
     fdata = fIn.read(3)
     # check if file is in AES Crypt format (also min length check)
-    if fdata != bytes("AES", "utf8") or inputLength < 136:
-        raise ValueError(
-            "File is corrupted or not an AES Crypt " "(or pyAesCrypt) file."
-        )
+    if fdata != b"AES":
+        raise ValueError("File is corrupted or not an AES Crypt (or pyAesCrypt) file.")
 
     # check if file is in AES Crypt format, version 2
     # (the only one compatible with pyAesCrypt)
@@ -367,51 +374,31 @@ def decryptStream(fIn, fOut, passw, bufferSize, inputLength):
     hmac0Act = hmac.HMAC(intKey, hashes.SHA256(), backend=default_backend())
 
     # decrypt ciphertext, until last block is reached
-    while fIn.tell() < inputLength - 32 - 1 - AESBlockSize:
+    last_block_reached = False
+    while not last_block_reached:
         # read data
-        cText = fIn.read(
-            min(bufferSize, inputLength - fIn.tell() - 32 - 1 - AESBlockSize)
-        )
+        cText = fIn.read(bufferSize)
+
+        # end of buffer
+        if len(fIn.peek(32 + 1)) < 32 + 1:
+            last_block_reached = True
+            cText += fIn.read()
+            fs16 = cText[-32 - 1]  # plaintext file size mod 16 lsb positions
+            hmac0 = cText[-32:]
+            cText = cText[: -32 - 1]
+
         # update HMAC
         hmac0Act.update(cText)
         # decrypt data and write it to output file
-        fOut.write(decryptor0.update(cText))
+        pText = decryptor0.update(cText)
 
-    # last block reached, remove padding if needed
+        # remove padding
+        if last_block_reached:
+            toremove = (16 - fs16) % 16
+            if toremove:
+                pText = pText[:-toremove]
 
-    # read last block
-
-    # this is for empty files
-    if fIn.tell() != inputLength - 32 - 1:
-        cText = fIn.read(AESBlockSize)
-        if len(cText) < AESBlockSize:
-            raise ValueError("File is corrupted.")
-    else:
-        cText = bytes()
-
-    # update HMAC
-    hmac0Act.update(cText)
-
-    # read plaintext file size mod 16 lsb positions
-    fs16 = fIn.read(1)
-    if len(fs16) != 1:
-        raise ValueError("File is corrupted.")
-
-    # decrypt last block
-    pText = decryptor0.update(cText) + decryptor0.finalize()
-
-    # remove padding
-    toremove = (16 - fs16[0]) % 16
-    if toremove != 0:
-        pText = pText[:-toremove]
-
-    # write decrypted data to output file
-    fOut.write(pText)
-
-    # read HMAC-SHA256 of the encrypted file
-    hmac0 = fIn.read(32)
-    if len(hmac0) != 32:
-        raise ValueError("File is corrupted.")
+        fOut.write(pText)
 
     # HMAC check
     if hmac0 != hmac0Act.finalize():
