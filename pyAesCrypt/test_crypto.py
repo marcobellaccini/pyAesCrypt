@@ -186,8 +186,8 @@ class TestBS(unittest.TestCase):
         # delete directory for test files
         os.rmdir(tfdirname)
     
-    # quick test for binary stream functions
-    def test_bs_quick(self):
+    # quick test for binary stream functions - deprecated version with stream size
+    def test_bs_quick_deprecated(self):
         # encrypt
         with open(filenames[4], "rb") as fIn:
             with open(encfilenames[4], "wb") as fOut:
@@ -205,6 +205,26 @@ class TestBS(unittest.TestCase):
 
         # check that the original file and the output file are equal
         self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
+
+    # quick test for binary stream functions
+    def test_bs_quick(self):
+        # encrypt
+        with open(filenames[4], "rb") as fIn:
+            with open(encfilenames[4], "wb") as fOut:
+                pyAesCrypt.encryptStream(fIn, fOut, password, bufferSize)
+        
+        # get encrypted file size
+        encFileSize = os.stat(encfilenames[4]).st_size
+        
+        # decrypt
+        with open(encfilenames[4], "rb") as fIn:
+            with open(decfilenames[4], "wb") as fOut:
+                # decrypt file stream
+                pyAesCrypt.decryptStream(fIn, fOut, password, bufferSize)
+
+        # check that the original file and the output file are equal
+        self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
+
 
 
 # test exceptions
