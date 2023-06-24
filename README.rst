@@ -1,7 +1,7 @@
 pyAesCrypt
 ===============
-.. image:: https://travis-ci.com/marcobellaccini/pyAesCrypt.svg?branch=master
-    :target: https://travis-ci.com/marcobellaccini/pyAesCrypt
+.. image:: https://github.com/marcobellaccini/pyaescrypt/actions/workflows/main.yml/badge.svg
+    :target: https://github.com/marcobellaccini/pyAesCrypt/actions
 .. image:: https://pepy.tech/badge/pyaescrypt
     :target: https://pepy.tech/project/pyaescrypt
 
@@ -64,15 +64,12 @@ In case you need it, you can work with binary streams too:
         with open("data.txt.aes", "wb") as fOut:
             pyAesCrypt.encryptStream(fIn, fOut, password, bufferSize)
     
-    # get encrypted file size
-    encFileSize = stat("data.txt.aes").st_size
-    
     # decrypt
     with open("data.txt.aes", "rb") as fIn:
         try:
             with open("dataout.txt", "wb") as fOut:
                 # decrypt file stream
-                pyAesCrypt.decryptStream(fIn, fOut, password, bufferSize, encFileSize)
+                pyAesCrypt.decryptStream(fIn, fOut, password, bufferSize)
         except ValueError:
             # remove output file on error
             remove("dataout.txt")
@@ -105,14 +102,11 @@ you can also perform in-memory encryption/decryption (using BytesIO):
     # print encrypted data
     print("This is the ciphertext:\n" + str(fCiph.getvalue()))
     
-    # get ciphertext length
-    ctlen = len(fCiph.getvalue())
-    
     # go back to the start of the ciphertext stream
     fCiph.seek(0)
     
     # decrypt stream
-    pyAesCrypt.decryptStream(fCiph, fDec, password, bufferSize, ctlen)
+    pyAesCrypt.decryptStream(fCiph, fDec, password, bufferSize)
     
     # print decrypted data
     print("Decrypted data:\n" + str(fDec.getvalue()))
