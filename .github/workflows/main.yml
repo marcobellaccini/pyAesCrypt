@@ -1,0 +1,39 @@
+name: pyaescrypt tests
+run-name: pyaescrypt tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  build_linux:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.7","3.8","3.9","3.10","3.11"]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install cryptography
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Install AESCrypt
+      run: |
+        wget https://www.aescrypt.com/download/v3/linux/aescrypt-3.14.tgz
+        tar -xzf aescrypt-3.14.tgz
+        pushd aescrypt-3.14/src && make && sudo make install && popd
+        
+    - name: Run tests
+      run: |
+        python -m unittest discover
+    
