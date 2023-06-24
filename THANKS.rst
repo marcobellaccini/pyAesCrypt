@@ -12,6 +12,8 @@ Thanks
 
 * Thanks to `MySixSenses`_ for pointing out that there was no default buffer size.
 
+* Thanks to `ddelange`_ for improving decryptStream.
+
 .. _Ben Fisher: https://downpoured.github.io/
 
 .. _Thomas O'Neill: https://github.com/toneill818
@@ -23,3 +25,5 @@ Thanks
 .. _Dead4W: https://github.com/Dead4W
 
 .. _MySixSenses: https://github.com/MySixSenses
+
+.. _ddelange: https://github.com/ddelange
