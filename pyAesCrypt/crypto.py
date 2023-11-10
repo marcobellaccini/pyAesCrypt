@@ -298,7 +298,7 @@ def decryptStream(fIn, fOut, passw, bufferSize=bufferSizeDef, inputLength=None):
         raise ValueError("Password is too long.")
 
     if not hasattr(fIn, "peek"):
-        fIn = io.BufferedReader(fIn, bufferSize)
+        fIn = io.BufferedReader(getBufferableFileobj(fIn), bufferSize)
 
     fdata = fIn.read(3)
     # check if file is in AES Crypt format (also min length check)
@@ -403,3 +403,32 @@ def decryptStream(fIn, fOut, passw, bufferSize=bufferSizeDef, inputLength=None):
     # HMAC check
     if hmac0 != hmac0Act.finalize():
         raise ValueError("Bad HMAC (file is corrupted).")
+
+# BufferableFileobj class
+# A fileobj suitable as input to io.BufferedReader
+class BufferableFileobj:
+    def __init__(self, fileobj):
+        self.__fileobj = fileobj
+        self.closed = False
+
+    def readable(self):
+        return True
+
+    def read(self, n = -1):
+        return self.__fileobj.read(n)
+
+    def readinto(self, b):
+        rbuf = self.read(len(b))
+        n = len(rbuf)
+        b[0:n] = rbuf
+        return n
+
+# Returns input argument if it is suitable as input to io.BufferedReader,
+#  otherwise an instance of BufferableFileobj with input argument as
+#  backing fileobj
+def getBufferableFileobj(fileobj):
+    noattr = object()
+    for attr in ('readable','readinto','closed'):
+        if getattr(fileobj, attr, noattr) == noattr:
+            return BufferableFileobj(fileobj)
+    return fileobj

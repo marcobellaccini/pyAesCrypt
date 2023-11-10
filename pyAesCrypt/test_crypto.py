@@ -225,6 +225,25 @@ class TestBS(unittest.TestCase):
         # check that the original file and the output file are equal
         self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
 
+    # quick test for binary stream functions with simplest possible input stream
+    def test_bs_simplefile(self):
+        # encrypt
+        with open(filenames[4], "rb") as fIn:
+            with open(encfilenames[4], "wb") as fOut:
+                pyAesCrypt.encryptStream(SimpleFile(fIn), fOut, password, bufferSize)
+
+        # get encrypted file size
+        encFileSize = os.stat(encfilenames[4]).st_size
+
+        # decrypt
+        with open(encfilenames[4], "rb") as fIn:
+            with open(decfilenames[4], "wb") as fOut:
+                # decrypt file stream
+                pyAesCrypt.decryptStream(SimpleFile(fIn), fOut, password, bufferSize)
+
+        # check that the original file and the output file are equal
+        self.assertTrue(filecmp.cmp(filenames[4], decfilenames[4]))
+
 
 
 # test exceptions
@@ -375,5 +394,16 @@ class TestExceptions(unittest.TestCase):
         # check that the original file was not modified
         self.assertTrue(filecmp.cmp(self.tfile, self.tfilebak))
     
+# simple file access class with only read() and tell() methods, nothing more
+class SimpleFile:
+    def __init__(self, f):
+        self.f = f
+
+    def read(self, size = -1):
+        return self.f.read(size)
+
+    def tell(self):
+        return self.f.tell()
+
 if __name__ == '__main__':
     unittest.main()
