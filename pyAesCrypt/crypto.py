@@ -45,7 +45,7 @@ from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 # pyAesCrypt version - now semver
-version = "6.1.0"
+version = "6.1.1"
 
 # default encryption/decryption buffer size - 64KB
 bufferSizeDef = 64 * 1024
